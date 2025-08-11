@@ -1,0 +1,7 @@
+iniciar docker desde terminal:
+docker-compose -f infra/docker-compose.yml up -d
+
+
+iniciar poetry uvicorn:
+#ejecutarlo desde la carpeta backend
+poetry run uvicorn app.main:app --reload

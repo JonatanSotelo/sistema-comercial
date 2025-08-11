@@ -1,0 +1,25 @@
+[tool.poetry]
+name = "backend"
+version = "0.1.0"
+description = ""
+authors = ["Jonatan Sotelo <bbip@live.com.ar>"]
+readme = "README.md"
+packages = [{ include = "app" }]
+license = "MIT"
+
+[tool.poetry.dependencies]
+python = ">=3.10,<4.0"
+fastapi = "^0.116.1"
+uvicorn = { extras = ["standard"], version = "^0.35.0" }
+python-dotenv = "^1.1.1"
+pydantic-settings = "^2.10.1"
+loguru = "^0.7.3"
+sqlalchemy = "^2.0.41"
+pydantic = {extras = ["email"], version = "^2.11.7"}
+passlib = {extras = ["bcrypt"], version = "^1.7.4"}
+psycopg2-binary = "^2.9.10"
+bcrypt = "3.2.2"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
