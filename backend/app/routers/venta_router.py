@@ -10,9 +10,12 @@ from app.services.venta_service import (
 
 router = APIRouter(prefix="/ventas", tags=["Ventas"])
 
-@router.post("/", response_model=VentaOut)
-def crear(venta: VentaCreate, db: Session = Depends(get_db)):
-    return crear_venta(db, venta)
+@router.post("/", response_model=VentaOut, status_code=status.HTTP_201_CREATED)
+def crear(data: VentaCreate, db: Session = Depends(get_db)):
+    try:
+        return crear_venta(db, data)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 @router.get("/{venta_id}", response_model=VentaOut)
 def obtener(venta_id: int, db: Session = Depends(get_db)):
@@ -34,3 +37,10 @@ def eliminar(venta_id: int, db: Session = Depends(get_db)):
     if not ok:
         raise HTTPException(status_code=404, detail="Venta no encontrada")
     return None
+
+@router.get("/{venta_id}", response_model=VentaOut)
+def obtener(venta_id: int, db: Session = Depends(get_db)):
+    v = obtener_venta(db, venta_id)
+    if not v:
+        raise HTTPException(status_code=404, detail="Venta no encontrada")
+    return v

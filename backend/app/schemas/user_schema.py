@@ -1,4 +1,6 @@
 from pydantic import BaseModel, EmailStr
+from pydantic.config import ConfigDict  # <-- nuevo import
+
 
 class UsuarioBase(BaseModel):
     username: str
@@ -11,7 +13,7 @@ class UsuarioOut(UsuarioBase):
     id: int
 
     class Config:
-        orm_mode = True
+        model_config = ConfigDict(from_attributes=True)
 
 class UsuarioUpdate(BaseModel):
     username: str | None = None

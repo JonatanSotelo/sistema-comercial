@@ -1,6 +1,7 @@
 services:
   db:
-    image: postgres:14
+    image: postgres:16
+    container_name: sc_postgres
     environment:
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: admin
@@ -9,19 +10,61 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d sistema"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
 
   redis:
     image: redis:7
+    container_name: sc_redis
     ports:
       - "6379:6379"
+    restart: unless-stopped
 
   pgadmin:
-    image: dpage/pgadmin4
+    image: dpage/pgadmin4:8
+    container_name: sc_pgadmin
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@admin.com
       PGADMIN_DEFAULT_PASSWORD: admin
     ports:
       - "8080:80"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin   # guarda tus servidores/ajustes
+
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: sc_backend
+    environment:
+      DATABASE_URL: postgresql+psycopg2://admin:admin@db:5432/sistema
+      DATABASE_HOST: db
+      DATABASE_PORT: "5432"
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    # En desarrollo, podés montar el código (o dejalo sin esto en prod)
+    volumes:
+      - ../backend/app:/app/app
+      - ../backend/migrations:/app/migrations
+      - ../backend/alembic.ini:/app/alembic.ini
 
 volumes:
   pgdata:
+  pgadmin_data:

@@ -1,5 +1,6 @@
 # app/schemas/producto_schema.py
 from pydantic import BaseModel
+from pydantic.config import ConfigDict  # <-- nuevo import
 from typing import Optional
 
 class ProductoBase(BaseModel):
@@ -19,4 +20,4 @@ class ProductoOut(ProductoBase):
     id: int
 
     class Config:
-        orm_mode = True
+        model_config = ConfigDict(from_attributes=True)

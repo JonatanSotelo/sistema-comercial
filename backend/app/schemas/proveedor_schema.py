@@ -1,22 +1,26 @@
-from pydantic import BaseModel, EmailStr, ConfigDict
-from pydantic.config import ConfigDict  # <-- nuevo import
+from pydantic import BaseModel, EmailStr
 from typing import Optional
+from pydantic.config import ConfigDict
 
-class ClienteBase(BaseModel):
+class ProveedorBase(BaseModel):
     nombre: str
+    cuit: Optional[str] = None
     email: Optional[EmailStr] = None
     telefono: Optional[str] = None
     direccion: Optional[str] = None
+    activo: Optional[bool] = True
 
-class ClienteCreate(ClienteBase):
+class ProveedorCreate(ProveedorBase):
     pass
 
-class ClienteUpdate(BaseModel):
+class ProveedorUpdate(BaseModel):
     nombre: Optional[str] = None
+    cuit: Optional[str] = None
     email: Optional[EmailStr] = None
     telefono: Optional[str] = None
     direccion: Optional[str] = None
+    activo: Optional[bool] = None
 
-class ClienteOut(ClienteBase):
+class ProveedorOut(ProveedorBase):
     id: int
     model_config = ConfigDict(from_attributes=True)

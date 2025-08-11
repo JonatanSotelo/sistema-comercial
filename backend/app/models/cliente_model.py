@@ -6,14 +6,15 @@ class Cliente(Base):
     __tablename__ = "clientes"
 
     id = Column(Integer, primary_key=True, index=True)
-    nombre = Column(String, nullable=False)
-    email = Column(String, unique=True, index=True)
+    nombre = Column(String, nullable=False, index=True)
+    email = Column(String, nullable=True)
     telefono = Column(String, nullable=True)
     direccion = Column(String, nullable=True)
 
-    # Lado inverso de la relación con Venta
+    # Relación UNO a MUCHOS con Venta (solo back_populates, sin backref)
     ventas = relationship(
         "Venta",
         back_populates="cliente",
-        cascade="all, delete-orphan"  # opcional: borra ventas al borrar cliente
+        cascade="all, delete-orphan",
+        passive_deletes=True,
     )

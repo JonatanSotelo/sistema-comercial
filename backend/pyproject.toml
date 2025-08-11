@@ -7,6 +7,7 @@ readme = "README.md"
 packages = [{ include = "app" }]
 license = "MIT"
 
+
 [tool.poetry.dependencies]
 python = ">=3.10,<4.0"
 fastapi = "^0.116.1"
@@ -19,6 +20,7 @@ pydantic = {extras = ["email"], version = "^2.11.7"}
 passlib = {extras = ["bcrypt"], version = "^1.7.4"}
 psycopg2-binary = "^2.9.10"
 bcrypt = "3.2.2"
+alembic = "^1.16.4"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
