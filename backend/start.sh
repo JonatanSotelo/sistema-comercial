@@ -1,15 +1,18 @@
 #!/usr/bin/env bash
 set -e
 
-echo "Esperando a Postgres en $DATABASE_HOST:$DATABASE_PORT..."
-# Espera simple a TCP abierto
-until nc -z "$DATABASE_HOST" "$DATABASE_PORT"; do
-  sleep 1
-done
-echo "Postgres listo!"
+# Esperar DB (ajustá HOST/PORT si cambian)
+if command -v nc >/dev/null 2>&1; then
+  echo "Esperando a la DB..."
+  until nc -z "${POSTGRES_HOST:-db}" "${POSTGRES_PORT:-5432}"; do
+    sleep 1
+  done
+fi
 
+# Migraciones Alembic
 echo "Aplicando migraciones..."
 alembic upgrade head
 
-echo "Iniciando Uvicorn..."
+# Levantar API
+echo "Iniciando FastAPI..."
 exec uvicorn app.main:app --host 0.0.0.0 --port 8000

@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
+
+from app.core.deps import get_current_user       # 👈 importar
 from app.db.database import get_db, Base, engine
 from app.schemas.producto_schema import ProductoCreate, ProductoUpdate, ProductoOut
 from app.services.producto_service import (
@@ -17,10 +19,6 @@ router = APIRouter(prefix="/productos", tags=["Productos"])
 def listar(db: Session = Depends(get_db)):
     return obtener_productos(db)
 
-@router.post("/", response_model=ProductoOut, status_code=status.HTTP_201_CREATED)
-def crear(data: ProductoCreate, db: Session = Depends(get_db)):
-    return crear_producto(db, data)
-
 @router.get("/{prod_id}", response_model=ProductoOut)
 def obtener(prod_id: int, db: Session = Depends(get_db)):
     prod = obtener_producto(db, prod_id)
@@ -28,14 +26,22 @@ def obtener(prod_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Producto no encontrado")
     return prod
 
-@router.put("/{prod_id}", response_model=ProductoOut)
+# 🔒 protegidos
+@router.post("/", response_model=ProductoOut, status_code=status.HTTP_201_CREATED,
+             dependencies=[Depends(get_current_user)])
+def crear(data: ProductoCreate, db: Session = Depends(get_db)):
+    return crear_producto(db, data)
+
+@router.put("/{prod_id}", response_model=ProductoOut,
+            dependencies=[Depends(get_current_user)])
 def actualizar(prod_id: int, data: ProductoUpdate, db: Session = Depends(get_db)):
     prod = actualizar_producto(db, prod_id, data)
     if not prod:
         raise HTTPException(status_code=404, detail="Producto no encontrado")
     return prod
 
-@router.delete("/{prod_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{prod_id}", status_code=status.HTTP_204_NO_CONTENT,
+               dependencies=[Depends(get_current_user)])
 def eliminar(prod_id: int, db: Session = Depends(get_db)):
     ok = eliminar_producto(db, prod_id)
     if not ok:

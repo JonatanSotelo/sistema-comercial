@@ -1,43 +1,94 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from typing import List
-from app.db.database import get_db, Base, engine
-from app.schemas.user_schema import UsuarioCreate, UsuarioOut, UsuarioUpdate
-from app.services.user_service import (
-    crear_usuario, listar_usuarios, obtener_usuario,
-    actualizar_usuario, eliminar_usuario
-)
 
-# Crear tablas si no existen (simple para dev)
-Base.metadata.create_all(bind=engine)
+from app.db.database import get_db
+from app.core.deps import get_current_user, require_admin
+from app.schemas.user_schema import UserCreate, UserUpdate, UserOut
+from app.services import user_service as svc
+from app.core.audit import log_action
+from app.models.auditoria import AuditAction
 
 router = APIRouter(prefix="/usuarios", tags=["Usuarios"])
 
-@router.post("/", response_model=UsuarioOut, status_code=status.HTTP_201_CREATED)
-def crear(data: UsuarioCreate, db: Session = Depends(get_db)):
-    return crear_usuario(db, data)
+@router.get("/", response_model=List[UserOut])
+def listar(db: Session = Depends(get_db), _: any = Depends(require_admin)):
+    return svc.list_users(db)
 
-@router.get("/", response_model=List[UsuarioOut])
-def listar(db: Session = Depends(get_db)):
-    return listar_usuarios(db)
+@router.get("/me", response_model=UserOut)
+def yo(user=Depends(get_current_user)):
+    return user
 
-@router.get("/{user_id}", response_model=UsuarioOut)
-def obtener(user_id: int, db: Session = Depends(get_db)):
-    usuario = obtener_usuario(db, user_id)
-    if not usuario:
+@router.post("/", response_model=UserOut, status_code=status.HTTP_201_CREATED)
+def crear(
+    data: UserCreate,
+    request: Request,
+    db: Session = Depends(get_db),
+    admin=Depends(require_admin),
+):
+    try:
+        u = svc.create_user(db, data)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    # Audit CREATE
+    log_action(
+        db,
+        request=request,
+        user=admin,
+        table_name="usuarios",
+        action=AuditAction.CREATE,
+        record_id=u.id,
+        after=u,
+        extra={"payload": {**data.model_dump(), "password": "***"}},
+    )
+    return u
+
+@router.put("/{user_id}", response_model=UserOut)
+def editar(
+    user_id: int,
+    data: UserUpdate,
+    request: Request,
+    db: Session = Depends(get_db),
+    admin=Depends(require_admin),
+):
+    before = svc.get_by_id(db, user_id)
+    if not before:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
-    return usuario
 
-@router.put("/{user_id}", response_model=UsuarioOut)
-def actualizar(user_id: int, data: UsuarioUpdate, db: Session = Depends(get_db)):
-    usuario = actualizar_usuario(db, user_id, data)
-    if not usuario:
-        raise HTTPException(status_code=404, detail="Usuario no encontrado")
-    return usuario
+    u = svc.update_user(db, user_id, data)
+    # Audit UPDATE (ocultar pass)
+    log_action(
+        db,
+        request=request,
+        user=admin,
+        table_name="usuarios",
+        action=AuditAction.UPDATE,
+        record_id=user_id,
+        before=before,
+        after=u,
+        extra={"payload": {**data.model_dump(), "password": "***" if data.password else None}},
+    )
+    return u
 
-@router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
-def eliminar(user_id: int, db: Session = Depends(get_db)):
-    ok = eliminar_usuario(db, user_id)
-    if not ok:
+@router.delete("/{user_id}", status_code=204)
+def borrar(
+    user_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    admin=Depends(require_admin),
+):
+    before = svc.get_by_id(db, user_id)
+    if not before:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
-    return None
+    svc.delete_user(db, user_id)
+    # Audit DELETE
+    log_action(
+        db,
+        request=request,
+        user=admin,
+        table_name="usuarios",
+        action=AuditAction.DELETE,
+        record_id=user_id,
+        before=before,
+    )
+    return
