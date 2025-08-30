@@ -1,28 +1,21 @@
+
 services:
   db:
-    image: postgres:16
+    image: postgres:15
     container_name: sc_postgres
     environment:
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: admin
-      POSTGRES_DB: sistema
+      POSTGRES_DB: admin
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
-    restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U admin -d sistema"]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB -h 127.0.0.1 -p 5432"]
       interval: 5s
       timeout: 3s
       retries: 20
-
-  redis:
-    image: redis:7
-    container_name: sc_redis
-    ports:
-      - "6379:6379"
-    restart: unless-stopped
 
   pgadmin:
     image: dpage/pgadmin4:8
@@ -31,42 +24,34 @@ services:
       PGADMIN_DEFAULT_EMAIL: admin@admin.com
       PGADMIN_DEFAULT_PASSWORD: admin
     ports:
-      - "8080:80"
+      - "5050:80"
     depends_on:
-      db:
-        condition: service_healthy
-    restart: unless-stopped
-    volumes:
-      - pgadmin_data:/var/lib/pgadmin
+      - db
+
+  redis:
+    image: redis:7
+    container_name: sc_redis
+    ports:
+      - "6379:6379"
 
   backend:
     build:
       context: ../backend
       dockerfile: Dockerfile
     container_name: sc_backend
-    command: ["/app/start.sh"]
+    env_file:
+      - ../backend/.env
     environment:
-      DATABASE_URL: postgresql+psycopg2://admin:admin@db:5432/sistema   # ✅ credenciales reales
-      JWT_SECRET: super_secreto_cambialo
-      JWT_ALG: HS256
-      ACCESS_TOKEN_EXPIRE_MINUTES: "60"
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - ../backend:/app
+    working_dir: /app
     ports:
       - "8000:8000"
     depends_on:
       db:
         condition: service_healthy
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://localhost:8000/health || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    volumes:
-      - ../backend/app:/app/app
-      - ../backend/migrations:/app/migrations
-      - ../backend/alembic.ini:/app/alembic.ini
-      - ../backend/tests:/app/tests
+    command: ["/app/start.sh"]
 
 volumes:
   pgdata:
-  pgadmin_data:

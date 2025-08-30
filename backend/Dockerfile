@@ -1,32 +1,32 @@
 FROM python:3.10-slim
 
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    POETRY_VIRTUALENVS_CREATE=false \
-    POETRY_NO_INTERACTION=1 \
-    PATH="/usr/local/bin:/root/.local/bin:${PATH}"
-
 WORKDIR /app
 
+# SO deps
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential libpq-dev netcat-traditional curl \
  && rm -rf /var/lib/apt/lists/*
 
+# Mejorar pip
 RUN python -m pip install --upgrade pip setuptools wheel
 
+# Copiamos definiciones de dependencias primero para aprovechar cache
 COPY pyproject.toml poetry.lock* /app/
 
+# Instalar Poetry y dependencias del proyecto (sin venv)
 RUN pip install --no-cache-dir poetry \
  && poetry config virtualenvs.create false \
+ && poetry lock --no-interaction \
  && poetry install --no-interaction --no-ansi --no-root --with dev \
  && pip install --no-cache-dir "uvicorn[standard]==0.35.0"
 
+# Copiar el resto del código
+COPY . /app
 
-COPY app /app/app
-COPY migrations /app/migrations
-COPY alembic.ini /app/alembic.ini
-COPY start.sh /app/start.sh
-RUN chmod +x /app/start.sh
+# Asegurar permisos de ejecución
+RUN chmod +x /app/start.sh || true
 
 EXPOSE 8000
+
+# Comando por defecto (lo sobreescribe docker-compose con /app/start.sh, pero dejamos algo sensato)
 CMD ["/app/start.sh"]
