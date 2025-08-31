@@ -51,7 +51,7 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    command: ["/app/start.sh"]
+    command: ["bash", "/app/start.sh"]
 
 volumes:
   pgdata:
