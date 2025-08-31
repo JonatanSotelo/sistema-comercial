@@ -17,28 +17,29 @@ from app.routers import (
 
 app = FastAPI(title="Sistema Comercial", version="0.1.0")
 
-# CORS (ajustar orígenes en prod)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # ajustá en prod
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# ✅ Incluí cada router UNA sola vez, con su prefix
-app.include_router(auth_router.router,      prefix="/auth",      tags=["Auth"])
-app.include_router(user_router.router,      prefix="/users",     tags=["Users"])
-app.include_router(producto_router.router,  prefix="/productos", tags=["Productos"])
-app.include_router(cliente_router.router,   prefix="/clientes",  tags=["Clientes"])
-app.include_router(proveedor_router.router, prefix="/proveedores", tags=["Proveedores"])
-app.include_router(compra_router.router,    prefix="/compras",   tags=["Compras"])
-app.include_router(venta_router.router,     prefix="/ventas",    tags=["Ventas"])
-app.include_router(stock_router.router,     prefix="/stock",     tags=["Stock"])
-app.include_router(auditoria_router.router, prefix="/auditoria", tags=["Auditoría"])
-app.include_router(health_router.router)  # si tu router define /health
+# 👉 auth_router NO tiene prefix interno => acá SÍ usamos prefix
+app.include_router(auth_router.router, prefix="/auth", tags=["Auth"])
 
-# fallback por si no tuvieras health_router
-@app.get("/health", tags=["Health"])
-def health():
-    return {"status": "ok"}
+# 👉 user_router define internamente /usuarios => acá usamos /users para agrupar
+app.include_router(user_router.router, prefix="/users", tags=["Usuarios"])
+
+# ❗️Estos routers YA tienen prefix interno (/productos, /clientes, etc.)
+#    Por eso acá VAN SIN prefix para evitar /productos/productos, etc.
+app.include_router(producto_router.router, tags=["Productos"])
+app.include_router(cliente_router.router, tags=["Clientes"])
+app.include_router(proveedor_router.router, tags=["Proveedores"])
+app.include_router(compra_router.router, tags=["Compras"])
+app.include_router(venta_router.router, tags=["Ventas"])
+app.include_router(stock_router.router, tags=["Stock"])
+app.include_router(auditoria_router.router, tags=["Auditoría"])
+
+# Health ya viene bien (1 sola vez)
+app.include_router(health_router.router, tags=["Health"])
