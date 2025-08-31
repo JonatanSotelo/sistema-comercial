@@ -43,6 +43,7 @@ services:
       - ../backend/.env
     environment:
       PYTHONUNBUFFERED: "1"
+      PYTHONPATH: /app
     volumes:
       - ../backend:/app
     working_dir: /app
