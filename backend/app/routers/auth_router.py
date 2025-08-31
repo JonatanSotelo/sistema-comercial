@@ -1,5 +1,6 @@
 # backend/app/routers/auth_router.py
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
@@ -15,22 +16,12 @@ class LoginRequest(BaseModel):
     password: str
 
 
-@router.post("/login", tags=["Auth"])
-def login(data: LoginRequest, db: Session = Depends(get_db)):
-    """
-    Login con JSON:
-    POST /auth/login
-    {
-      "username": "admin",
-      "password": "admin123"
-    }
-    """
-    user = db.query(User).filter(User.username == data.username).first()
-    if not user or not verify_password(data.password, user.hashed_password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Credenciales inválidas",
-        )
-
+@router.post("/oauth2/token", tags=["Auth"])
+def oauth2_token(form_data: OAuth2PasswordRequestForm = Depends(),
+                 db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.username == form_data.username).first()
+    if not user or not verify_password(form_data.password, user.hashed_password):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="Credenciales inválidas")
     token = create_access_token(subject=user.username)
     return {"access_token": token, "token_type": "bearer"}
