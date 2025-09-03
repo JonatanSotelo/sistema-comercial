@@ -24,7 +24,8 @@ def client(base_url: str):
 
 @pytest.fixture(scope="session")
 def admin_token(client: httpx.Client, admin_user: str, admin_pass: str) -> str:
-    r = client.post("/auth/login", data={"username": admin_user, "password": admin_pass})
+    # login por JSON (ajusta a /auth/oauth2/token si usás form)
+    r = client.post("/auth/login", json={"username": admin_user, "password": admin_pass})
     if r.status_code != 200:
         pytest.skip(f"No pude loguear admin ({admin_user}). Respuesta: {r.status_code} {r.text}")
     return r.json()["access_token"]
@@ -37,3 +38,7 @@ def auth_headers(admin_token: str):
 def unique_username() -> str:
     # Usuario único por test
     return f"vend_{uuid.uuid4().hex[:8]}"
+
+@pytest.fixture(scope="session")
+def excel_mime_prefix() -> str:
+    return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"

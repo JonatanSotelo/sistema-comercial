@@ -1,7 +1,11 @@
 # app/core/deps.py
-from fastapi import Depends, HTTPException, status
+from __future__ import annotations
+
+from typing import Optional
+from fastapi import Depends, HTTPException, Query, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt, JWTError
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.core.settings import settings
@@ -49,3 +53,24 @@ def require_admin(current_user: User = Depends(get_current_user)) -> User:
     if not (role_ok or flag_ok):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Solo admin")
     return current_user
+
+# -----------------------------
+# Paginación / filtros comunes
+# -----------------------------
+class CommonQueryParams(BaseModel):
+    # Si NO se pasan estos params, el endpoint devolverá lista (modo legacy)
+    page: Optional[int] = Field(default=None, ge=1, description="Página (1..n)")
+    size: Optional[int] = Field(default=None, ge=1, le=200, description="Tamaño de página (1..200)")
+    search: Optional[str] = Field(default=None, description="Búsqueda texto (ilike) en nombre/descripcion/sku si aplica")
+    sort: Optional[str] = Field(
+        default=None,
+        description="Campos separados por coma. Prefijo '-' = DESC. Ej: nombre,-precio"
+    )
+
+def common_params(
+    page: Optional[int] = Query(default=None, ge=1),
+    size: Optional[int] = Query(default=None, ge=1, le=200),
+    search: Optional[str] = Query(default=None),
+    sort: Optional[str] = Query(default=None),
+) -> CommonQueryParams:
+    return CommonQueryParams(page=page, size=size, search=search, sort=sort)

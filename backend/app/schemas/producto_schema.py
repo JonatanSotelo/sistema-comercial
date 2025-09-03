@@ -1,7 +1,9 @@
 # app/schemas/producto_schema.py
+from __future__ import annotations
+
+from typing import Optional, List
 from pydantic import BaseModel
-from pydantic.config import ConfigDict  # <-- nuevo import
-from typing import Optional
+from pydantic.config import ConfigDict  # Pydantic v2
 
 class ProductoBase(BaseModel):
     nombre: str
@@ -18,6 +20,10 @@ class ProductoUpdate(BaseModel):
 
 class ProductoOut(ProductoBase):
     id: int
+    model_config = ConfigDict(from_attributes=True)
 
-    class Config:
-        model_config = ConfigDict(from_attributes=True)
+class ProductoPageOut(BaseModel):
+    items: List[ProductoOut]
+    total: int
+    page: int
+    size: int

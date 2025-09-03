@@ -1,32 +1,28 @@
-FROM python:3.10-slim
+# backend/Dockerfile
+FROM python:3.11-slim
 
+# Evitar buffers y bytecode
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+# Carpeta de trabajo (coincide con docker-compose)
 WORKDIR /app
 
-# SO deps
+# Paquetes de sistema necesarios (psycopg2 y build tools)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential libpq-dev netcat-traditional curl \
- && rm -rf /var/lib/apt/lists/*
+    build-essential \
+    libpq-dev \
+  && rm -rf /var/lib/apt/lists/*
 
-# Mejorar pip
-RUN python -m pip install --upgrade pip setuptools wheel
+# Copiamos requirements e instalamos deps
+COPY requirements.txt /app/requirements.txt
+RUN pip install --no-cache-dir -r /app/requirements.txt
 
-# Copiamos definiciones de dependencias primero para aprovechar cache
-COPY pyproject.toml poetry.lock* /app/
-
-# Instalar Poetry y dependencias del proyecto (sin venv)
-RUN pip install --no-cache-dir poetry \
- && poetry config virtualenvs.create false \
- && poetry lock --no-interaction \
- && poetry install --no-interaction --no-ansi --no-root --with dev \
- && pip install --no-cache-dir "uvicorn[standard]==0.35.0"
-
-# Copiar el resto del código
+# Copiamos el código (igualmente luego montás volumen ./backend:/app)
 COPY . /app
 
-# Asegurar permisos de ejecución
-RUN chmod +x /app/start.sh || true
-
+# Exponemos el puerto que mapea docker-compose
 EXPOSE 8000
 
-# Comando por defecto (lo sobreescribe docker-compose con /app/start.sh, pero dejamos algo sensato)
-CMD ["/app/start.sh"]
+# El comando real lo define docker-compose:
+# command: ["bash", "/app/start.sh"]
