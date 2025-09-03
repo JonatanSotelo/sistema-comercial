@@ -1,3 +1,4 @@
+# app/models/producto.py
 from sqlalchemy import Column, Integer, String, Float
 from app.db.database import Base
 
