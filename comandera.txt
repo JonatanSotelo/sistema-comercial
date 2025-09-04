@@ -5,3 +5,14 @@ docker-compose -f infra/docker-compose.yml up -d
 iniciar poetry uvicorn:
 #ejecutarlo desde la carpeta backend
 poetry run uvicorn app.main:app --reload
+
+Levantar docker standar USAR ESTE:
+# 1. Levantar (rebuild si hiciste cambios en requirements.txt o Dockerfile)
+docker compose up -d --build
+
+# 2. Ver logs en vivo (para confirmar que FastAPI arrancó)
+docker compose logs -f backend
+
+# 3. Una vez que veas "Uvicorn running on http://0.0.0.0:8000"
+# probá el health
+curl http://localhost:8000/health

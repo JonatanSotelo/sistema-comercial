@@ -1,12 +1,10 @@
-from pydantic import BaseModel, EmailStr, ConfigDict
-from pydantic.config import ConfigDict  # <-- nuevo import
 from typing import Optional
+from pydantic import BaseModel, EmailStr
 
 class ClienteBase(BaseModel):
     nombre: str
     email: Optional[EmailStr] = None
     telefono: Optional[str] = None
-    direccion: Optional[str] = None
 
 class ClienteCreate(ClienteBase):
     pass
@@ -15,8 +13,8 @@ class ClienteUpdate(BaseModel):
     nombre: Optional[str] = None
     email: Optional[EmailStr] = None
     telefono: Optional[str] = None
-    direccion: Optional[str] = None
 
 class ClienteOut(ClienteBase):
     id: int
-    model_config = ConfigDict(from_attributes=True)
+    class Config:
+        from_attributes = True  # pydantic v2

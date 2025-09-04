@@ -26,7 +26,6 @@ def get_current_user(
     )
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-        # Soportar tokens viejos (sub como dict) y nuevos (sub como string)
         sub = payload.get("sub")
         if isinstance(sub, dict):
             username = sub.get("sub")
@@ -43,25 +42,24 @@ def get_current_user(
     return user
 
 def require_admin(current_user: User = Depends(get_current_user)) -> User:
-    """
-    Acepta admin si:
-      - role == 'admin'  (tabla users de tu proyecto)
-      - o is_admin == True (si existiera en algún otro modelo)
-    """
+    """Admin si role == 'admin' o is_admin == True."""
     role_ok = getattr(current_user, "role", None) == "admin"
     flag_ok = bool(getattr(current_user, "is_admin", False))
     if not (role_ok or flag_ok):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Solo admin")
     return current_user
 
+def require_user(current_user: User = Depends(get_current_user)) -> User:
+    """Cualquier usuario autenticado."""
+    return current_user
+
 # -----------------------------
 # Paginación / filtros comunes
 # -----------------------------
 class CommonQueryParams(BaseModel):
-    # Si NO se pasan estos params, el endpoint devolverá lista (modo legacy)
     page: Optional[int] = Field(default=None, ge=1, description="Página (1..n)")
     size: Optional[int] = Field(default=None, ge=1, le=200, description="Tamaño de página (1..200)")
-    search: Optional[str] = Field(default=None, description="Búsqueda texto (ilike) en nombre/descripcion/sku si aplica")
+    search: Optional[str] = Field(default=None, description="Búsqueda texto (ilike)")
     sort: Optional[str] = Field(
         default=None,
         description="Campos separados por coma. Prefijo '-' = DESC. Ej: nombre,-precio"

@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.core.deps import get_current_user, require_admin, common_params, CommonQueryParams
 from app.db.database import get_db
-from app.models.producto import Producto
+from app.models.producto_model import Producto
 from app.schemas.producto_schema import (
     ProductoCreate, ProductoUpdate, ProductoOut, ProductoPageOut
 )

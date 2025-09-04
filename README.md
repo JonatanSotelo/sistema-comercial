@@ -1,195 +1,312 @@
-Sistema Comercial — Backend (FastAPI)
-Backend modular y escalable para gestión comercial: productos, clientes, ventas y usuarios.
-Stack: FastAPI + SQLAlchemy + Pydantic + Uvicorn + Poetry.
-DB por defecto: SQLite (simple para dev). Fácil migración a PostgreSQL.
+# 🏪 Sistema Comercial - Documentación Principal
+
+## 🎯 Descripción General
+
+Sistema de gestión comercial completo desarrollado con **FastAPI** y **PostgreSQL**. Incluye gestión de clientes, proveedores, productos, stock, compras, ventas, usuarios, auditoría y respaldos automáticos.
+
+### ✨ Características Principales
+- **Gestión Completa**: Clientes, proveedores, productos, stock, compras, ventas
+- **Autenticación JWT**: Sistema seguro de usuarios y roles
+- **Control de Stock**: Movimientos automáticos IN/OUT con validaciones
+- **Auditoría**: Registro completo de todas las operaciones
+- **Respaldos Automáticos**: Backups diarios programados
+- **Monitoreo**: Métricas, alertas y health checks en tiempo real
+- **Validaciones**: Reglas de negocio robustas y rate limiting
+- **CI/CD**: Pipeline automatizado de testing y deployment
+- **Producción**: Configuración lista para producción con Nginx y SSL
+
+---
+
+## 📚 Documentación Disponible
+
+### **🚀 Inicio Rápido**
+- **[QUICK_START.md](QUICK_START.md)** - Guía de inicio rápido (5 minutos)
+- **[DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)** - Guía completa de deployment
+
+### **📖 Documentación Técnica**
+- **[GUIA_COMPLETA.md](GUIA_COMPLETA.md)** - Guía completa del sistema
+- **[API_REFERENCE.md](API_REFERENCE.md)** - Referencia completa de la API
+- **[backend/README.md](backend/README.md)** - Documentación técnica del backend
+
+### **🔧 Configuración**
+- **[env.example](backend/env.example)** - Plantilla de variables de entorno
+- **[docker-compose.prod.yml](docker-compose.prod.yml)** - Configuración de producción
+- **[nginx.conf](nginx.conf)** - Configuración de Nginx
+
+---
+
+## ⚡ Inicio Rápido
+
+### **1. Clonar y Levantar**
+```bash
+git clone <tu-repositorio>
+cd sistema-comercial
+docker-compose up -d
+```
+
+### **2. Configurar Base de Datos**
+```bash
+# Ejecutar migraciones
+docker-compose exec backend alembic upgrade head
+
+# Poblar datos iniciales
+docker-compose exec backend python -c "from app.seed import run; run()"
+```
+
+### **3. ¡Listo! Acceder al Sistema**
+- **API**: http://localhost:8000
+- **Documentación**: http://localhost:8000/docs
+- **Usuario**: `admin` / `admin123`
+
+---
+
+## 🏗️ Arquitectura del Sistema
+
+### **Tecnologías Utilizadas**
+- **Backend**: FastAPI, SQLAlchemy, Alembic
+- **Base de Datos**: PostgreSQL
+- **Autenticación**: JWT con Passlib
+- **Testing**: Pytest con coverage
+- **Deployment**: Docker, Docker Compose, Nginx
+- **CI/CD**: GitHub Actions
+- **Monitoreo**: Sistema custom de métricas y alertas
+
+### **Estructura del Proyecto**
+```
+sistema-comercial/
+├── backend/                 # Backend FastAPI
+│   ├── app/
+│   │   ├── core/           # Configuración central
+│   │   ├── db/             # Base de datos
+│   │   ├── models/         # Modelos SQLAlchemy
+│   │   ├── schemas/        # Esquemas Pydantic
+│   │   ├── services/       # Lógica de negocio
+│   │   └── routers/        # Endpoints FastAPI
+│   ├── tests/              # Tests automatizados
+│   ├── migrations/         # Migraciones Alembic
+│   └── requirements.txt    # Dependencias
+├── .github/workflows/      # CI/CD Pipeline
+├── docker-compose.yml      # Desarrollo
+├── docker-compose.prod.yml # Producción
+├── nginx.conf              # Configuración Nginx
+├── deploy.sh               # Script de deployment
+└── README.md               # Esta documentación
+```
+
+---
+
+## 🔌 API Endpoints Principales
+
+### **Autenticación**
+- `POST /auth/login` - Login de usuario
+- `GET /auth/me` - Usuario actual
 
-📦 Requisitos
-Python 3.10+
+### **Gestión de Datos**
+- `GET /clientes/` - Listar clientes
+- `GET /proveedores/` - Listar proveedores
+- `GET /productos/` - Listar productos
+- `GET /compras/` - Listar compras
+- `GET /ventas/` - Listar ventas
+
+### **Monitoreo**
+- `GET /monitoring/health` - Health check
+- `GET /monitoring/metrics` - Métricas
+- `GET /monitoring/status` - Estado del sistema
+
+---
 
-Poetry 2.x
+## 🧪 Testing
+
+### **Ejecutar Tests**
+```bash
+cd backend
+pytest
+
+# Con coverage
+pytest --cov=app --cov-report=html
+
+# Tests específicos
+pytest tests/test_ventas_completas.py -v
+```
+
+### **Cobertura de Tests**
+- **Ventas**: Stock insuficiente, precios personalizados, clientes
+- **Compras**: Validaciones de proveedores, productos, costos
+- **Stock**: Movimientos múltiples, validaciones de inventario
+- **Autenticación**: Login, registro, roles
+- **Validaciones**: Reglas de negocio, rate limiting
+
+---
+
+## 🚀 Deployment
+
+### **Desarrollo**
+```bash
+docker-compose up -d
+```
+
+### **Producción**
+```bash
+# Configurar variables
+cp backend/env.example .env
+nano .env
+
+# Ejecutar deployment
+./deploy.sh
+```
+
+### **CI/CD**
+El pipeline se ejecuta automáticamente en:
+- Push a main/develop
+- Pull requests a main
+
+---
+
+## 📊 Monitoreo y Alertas
+
+### **Health Checks**
+```bash
+curl http://localhost:8000/monitoring/health
+```
+
+### **Métricas en Tiempo Real**
+```bash
+curl http://localhost:8000/monitoring/metrics
+```
+
+### **Alertas Automáticas**
+- Error Rate Alto (>10%)
+- Response Time Alto (>5s)
+- Errores Consecutivos (>5)
+- Base de Datos no disponible
+- Sistema de Backup no accesible
+
+---
 
-(Opcional) Docker Desktop (para Postgres más adelante)
+## 🛡️ Validaciones de Negocio
+
+### **Validaciones Implementadas**
+- **Email**: Formato válido con regex
+- **Teléfono**: Formato internacional
+- **Precios**: Valores positivos, máximo 2 decimales
+- **Cantidades**: Valores positivos, validación de stock
+- **Usuarios**: Username válido, contraseña segura
+- **Rate Limiting**: 100 requests/minuto por IP
 
-🚀 Instalación
-# Estar en la carpeta backend/
-poetry install
-poetry add "pydantic[email]" passlib[bcrypt]  # si no los tenés aún
+---
 
-# (solución warning bcrypt/passlib en Windows)
-poetry add "bcrypt==3.2.2"
+## 🔧 Troubleshooting
 
-▶️ Ejecutar
-poetry run uvicorn app.main:app --reload
+### **Problemas Comunes**
 
-Docs: http://localhost:8000/docs
+#### **Sistema no responde**
+```bash
+# Ver logs
+docker-compose logs -f backend
 
-Healthcheck: GET /health → { "status": "ok" }
+# Reiniciar
+docker-compose restart backend
+```
 
-🗂️ Estructura
-backend/
-└── app/
-    ├── core/                 # (futuro) settings, logging
-    ├── db/
-    │   ├── database.py       # engine, SessionLocal, Base, get_db()
-    ├── models/               # SQLAlchemy models
-    │   ├── producto_model.py
-    │   ├── cliente_model.py
-    │   ├── venta_model.py
-    │   └── user_model.py
-    ├── schemas/              # Pydantic (Create/Update/Out)
-    ├── services/             # Lógica de negocio (DB ops)
-    ├── routers/              # Endpoints FastAPI
-    └── main.py               # Punto de entrada
+#### **Error de base de datos**
+```bash
+# Verificar PostgreSQL
+docker-compose ps postgres
 
-🔌 Base de datos
-Opción A: SQLite (por defecto)
-app/db/database.py
+# Reiniciar base de datos
+docker-compose restart postgres
+```
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, declarative_base
+#### **Error de autenticación**
+```bash
+# Verificar usuario admin
+docker-compose exec backend python -c "
+from app.db.database import SessionLocal
+from app.models.user_model import User
+db = SessionLocal()
+admin = db.query(User).filter(User.username == 'admin').first()
+print('Admin existe:', admin is not None)
+db.close()
+"
+```
 
-DATABASE_URL = "sqlite:///./test.db"
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+---
 
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-Base = declarative_base()
+## 📈 Roadmap
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+### **Funcionalidades Futuras**
 
-Opción B: PostgreSQL (producción, con Docker)
-Instalar driver:
-poetry add psycopg2-binary
+#### **Fase 1 - Mejoras de UX**
+- [ ] Dashboard web con React/Vue
+- [ ] Notificaciones en tiempo real
+- [ ] Reportes y gráficos avanzados
 
-Cambiar en database.py:
-# DATABASE_URL = "postgresql+psycopg2://admin:admin@localhost:5432/sistema"
-# engine = create_engine(DATABASE_URL)
-Próximo paso: agregar Alembic para migraciones (lo dejamos listo en la próxima iteración).
+#### **Fase 2 - Funcionalidades Avanzadas**
+- [ ] Sistema de inventario con códigos de barras
+- [ ] Integración con sistemas de pago
+- [ ] API para integración con otros sistemas
 
-📚 Endpoints (CRUD)
-Productos
-POST /productos/ — Crear
+#### **Fase 3 - Escalabilidad**
+- [ ] Cache con Redis
+- [ ] Load balancing
+- [ ] Microservicios
+- [ ] Kubernetes deployment
 
-GET /productos/ — Listar
+#### **Fase 4 - Inteligencia de Negocio**
+- [ ] Análisis predictivo de ventas
+- [ ] Recomendaciones de productos
+- [ ] Optimización de stock
+- [ ] Machine learning para tendencias
 
-GET /productos/{id} — Obtener uno
+---
 
-PUT /productos/{id} — Actualizar
+## 📞 Soporte y Contacto
 
-DELETE /productos/{id} — Eliminar
+### **Documentación Adicional**
+- **API Docs**: http://localhost:8000/docs
+- **ReDoc**: http://localhost:8000/redoc
+- **Health Check**: http://localhost:8000/monitoring/health
 
-Clientes
-POST /clientes/
+### **Comandos Útiles**
 
-GET /clientes/
+```bash
+# Reiniciar servicios
+docker-compose restart
 
-GET /clientes/{id}
+# Ver logs en tiempo real
+docker-compose logs -f
 
-PUT /clientes/{id}
+# Ejecutar migraciones
+docker-compose exec backend alembic upgrade head
 
-DELETE /clientes/{id}
+# Crear respaldo manual
+docker-compose exec backend python -c "from app.services.backup_service import create_backup_zip; create_backup_zip()"
 
-Ventas
-POST /ventas/
+# Ver estadísticas de uso
+curl http://localhost:8000/monitoring/performance
+```
 
-GET /ventas/
+---
 
-GET /ventas/{id}
+## 🎉 ¡Sistema Listo para Producción!
 
-PUT /ventas/{id}
+El **Sistema Comercial** está completamente implementado con:
 
-DELETE /ventas/{id}
+✅ **Funcionalidad Completa** - Todos los módulos operativos  
+✅ **Testing Exhaustivo** - Cobertura completa con casos edge  
+✅ **Validaciones Robustas** - Reglas de negocio y rate limiting  
+✅ **Monitoreo Avanzado** - Métricas, alertas y health checks  
+✅ **CI/CD Automatizado** - Pipeline completo de testing y deployment  
+✅ **Configuración de Producción** - Docker, Nginx, SSL, optimizaciones  
 
-Usuarios
-POST /usuarios/ (hashea password con passlib[bcrypt])
+**¡Disfruta tu sistema comercial! 🚀**
 
-GET /usuarios/
+---
 
-GET /usuarios/{id}
+## 📚 Enlaces Rápidos
 
-PUT /usuarios/{id}
-
-DELETE /usuarios/{id}
-
-🧪 Pruebas rápidas (Swagger)
-Abrí http://localhost:8000/docs
-
-Probá el flujo CRUD en cada entidad:
-
-Crear → Listar → Obtener → Actualizar → Eliminar
-
-Ventas requieren cliente_id válido.
-
-
-🧩 Commit & Push (rama master)
-# Estar en backend/ o en la raíz del repo según tu .git
-git add .
-git commit -m "Backend FastAPI: CRUD completo (productos, clientes, ventas, usuarios)"
-git branch -M master
-git push -u origin master
-
-
-
-
-
-
-🛠️ Troubleshooting
-1) Warning de Pydantic v2
-   UserWarning: 'orm_mode' has been renamed to 'from_attributes'
-Soluciones:
-
-Mantener class Config: orm_mode = True (funciona igual), o
-
-Usar Pydantic v2:
-from pydantic import ConfigDict
-class ProductoOut(...):
-    model_config = ConfigDict(from_attributes=True)
-
-
-2) Warning/trace de bcrypt
-   (trapped) error reading bcrypt version
-AttributeError: module 'bcrypt' has no attribute '__about__'
-
-Solución:
-poetry add "bcrypt==3.2.2"
-
-3) Error relaciones SQLAlchemy (has no property 'ventas')
-Asegurate de definir ambos lados:
-# cliente_model.py
-ventas = relationship("Venta", back_populates="cliente")
-
-# venta_model.py
-cliente = relationship("Cliente", back_populates="ventas")
-
-Si cambiaste modelos, borrar test.db y reiniciar.
-
-4) Swagger no deja editar body en POST/PUT
-Revisá que el endpoint reciba un schema Pydantic (no dict) como parámetro.
-
-🧭 Roadmap próximo (lo trabajamos en la siguiente sesión)
-Migración a PostgreSQL con docker-compose
-
-Alembic para migraciones
-
-Autenticación JWT (login/logout, protección de rutas)
-
-Validaciones y constraints adicionales
-
-Tests con pytest
-
-CI/CD básico (GitHub Actions)
-
-👤 Autor
-Jonatan Sotelo
-
-Organización técnica: FastAPI + SQLAlchemy + Poetry
-
-Mentoría técnica: ChatGPT
-
-
-6) 
-
+- **[🚀 Quick Start](QUICK_START.md)** - Inicio rápido
+- **[📖 Guía Completa](GUIA_COMPLETA.md)** - Documentación completa
+- **[🔧 Deployment](DEPLOYMENT_GUIDE.md)** - Guía de deployment
+- **[📚 API Reference](API_REFERENCE.md)** - Referencia de la API
+- **[🔧 Backend README](backend/README.md)** - Documentación técnica

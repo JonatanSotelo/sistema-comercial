@@ -1,32 +1,21 @@
 
 services:
   db:
-    image: postgres:15
+    image: postgres:16
     container_name: sc_postgres
     environment:
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: admin
-      POSTGRES_DB: admin
+      POSTGRES_USER: sc_user
+      POSTGRES_PASSWORD: sc_pass
+      POSTGRES_DB: sc_db
     ports:
       - "5432:5432"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - pg_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB -h 127.0.0.1 -p 5432"]
+      test: ["CMD-SHELL", "pg_isready -U sc_user -d sc_db"]
       interval: 5s
       timeout: 3s
       retries: 20
-
-  pgadmin:
-    image: dpage/pgadmin4:8
-    container_name: sc_pgadmin
-    environment:
-      PGADMIN_DEFAULT_EMAIL: admin@admin.com
-      PGADMIN_DEFAULT_PASSWORD: admin
-    ports:
-      - "5050:80"
-    depends_on:
-      - db
 
   redis:
     image: redis:7
@@ -34,25 +23,40 @@ services:
     ports:
       - "6379:6379"
 
+  pgadmin:
+    image: dpage/pgadmin4:8.10
+    container_name: sc_pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@local
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - db
+
   backend:
     build:
-      context: ../backend
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: backend/Dockerfile
     container_name: sc_backend
-    env_file:
-      - ../backend/.env
     environment:
-      PYTHONUNBUFFERED: "1"
-      PYTHONPATH: /app
+      # Usa la env para overridear el default de settings.py
+      DATABASE_URL: postgresql+psycopg2://sc_user:sc_pass@db:5432/sc_db
+      ADMIN_USERNAME: admin
+      ADMIN_PASSWORD: admin123
     volumes:
       - ../backend:/app
-    working_dir: /app
+      - backups_data:/app/backups
     ports:
       - "8000:8000"
     depends_on:
       db:
         condition: service_healthy
-    command: ["bash", "/app/start.sh"]
+      redis:
+        condition: service_started
+    command: >
+      uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
 volumes:
-  pgdata:
+  pg_data:
+  backups_data:

@@ -40,6 +40,13 @@ passlib = { version = "^1.7.4", extras = ["bcrypt"] }
 python-jose = { version = "^3.3.0", extras = ["cryptography"] }
 python-multipart = "^0.0.9"
 
+# Excel export
+openpyxl = "^3.1.5"
+
+# Scheduler
+APScheduler = "^3.10.4"
+pytz = "^2024.1"
+
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
