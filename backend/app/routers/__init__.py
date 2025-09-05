@@ -17,6 +17,7 @@ from app.routers.dashboard_router import router as dashboard_router
 from app.routers.notificacion_router import router as notificacion_router
 from app.routers.descuento_router import router as descuento_router  # 👈 nuevo
 from app.routers.inventario_router import router as inventario_router  # 👈 nuevo
+from app.routers.precio_router import router as precio_router  # 👈 nuevo
 
 def register_routers(app: FastAPI) -> None:
     app.include_router(health_router)
@@ -34,3 +35,4 @@ def register_routers(app: FastAPI) -> None:
     app.include_router(notificacion_router)
     app.include_router(descuento_router)
     app.include_router(inventario_router)
+    app.include_router(precio_router)
