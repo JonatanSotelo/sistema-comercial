@@ -12,7 +12,11 @@ from app.routers.stock_router import router as stock_router
 from app.routers.compra_router import router as compra_router
 from app.routers.venta_router import router as venta_router
 from app.routers.backup_router import router as backup_router
-from app.routers.auditoria_router import router as auditoria_router  # 👈 nuevo
+from app.routers.auditoria_router import router as auditoria_router
+from app.routers.dashboard_router import router as dashboard_router
+from app.routers.notificacion_router import router as notificacion_router
+from app.routers.descuento_router import router as descuento_router  # 👈 nuevo
+from app.routers.inventario_router import router as inventario_router  # 👈 nuevo
 
 def register_routers(app: FastAPI) -> None:
     app.include_router(health_router)
@@ -26,3 +30,7 @@ def register_routers(app: FastAPI) -> None:
     app.include_router(venta_router)
     app.include_router(backup_router)
     app.include_router(auditoria_router)
+    app.include_router(dashboard_router)
+    app.include_router(notificacion_router)
+    app.include_router(descuento_router)
+    app.include_router(inventario_router)
