@@ -41,16 +41,17 @@ Sistema de gestión comercial completo desarrollado con **FastAPI** y **PostgreS
 ```bash
 git clone <tu-repositorio>
 cd sistema-comercial
-docker-compose up -d
+cd infra
+docker compose up -d
 ```
 
 ### **2. Configurar Base de Datos**
 ```bash
 # Ejecutar migraciones
-docker-compose exec backend alembic upgrade head
+docker compose exec backend alembic upgrade head
 
 # Poblar datos iniciales
-docker-compose exec backend python -c "from app.seed import run; run()"
+docker compose exec backend python -c "from app.seed import run; run()"
 ```
 
 ### **3. ¡Listo! Acceder al Sistema**
@@ -142,7 +143,8 @@ pytest tests/test_ventas_completas.py -v
 
 ### **Desarrollo**
 ```bash
-docker-compose up -d
+cd infra
+docker compose up -d
 ```
 
 ### **Producción**
@@ -202,25 +204,25 @@ curl http://localhost:8000/monitoring/metrics
 #### **Sistema no responde**
 ```bash
 # Ver logs
-docker-compose logs -f backend
+docker compose logs -f backend
 
 # Reiniciar
-docker-compose restart backend
+docker compose restart backend
 ```
 
 #### **Error de base de datos**
 ```bash
 # Verificar PostgreSQL
-docker-compose ps postgres
+docker compose ps db
 
 # Reiniciar base de datos
-docker-compose restart postgres
+docker compose restart db
 ```
 
 #### **Error de autenticación**
 ```bash
 # Verificar usuario admin
-docker-compose exec backend python -c "
+docker compose exec backend python -c "
 from app.db.database import SessionLocal
 from app.models.user_model import User
 db = SessionLocal()
@@ -271,16 +273,16 @@ db.close()
 
 ```bash
 # Reiniciar servicios
-docker-compose restart
+docker compose restart
 
 # Ver logs en tiempo real
-docker-compose logs -f
+docker compose logs -f
 
 # Ejecutar migraciones
-docker-compose exec backend alembic upgrade head
+docker compose exec backend alembic upgrade head
 
 # Crear respaldo manual
-docker-compose exec backend python -c "from app.services.backup_service import create_backup_zip; create_backup_zip()"
+docker compose exec backend python -c "from app.services.backup_service import create_backup_zip; create_backup_zip()"
 
 # Ver estadísticas de uso
 curl http://localhost:8000/monitoring/performance

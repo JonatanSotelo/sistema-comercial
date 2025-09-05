@@ -2,8 +2,8 @@ from alembic import op
 import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
-revision = "815b9ee8b57a"            # podés dejar el id que generó Alembic
-down_revision = "5cb3f141eb55"       # 👈 tu head actual
+revision = "f30b2f7abe0e"
+down_revision = "5cb3f141eb55"
 branch_labels = None
 depends_on = None
 

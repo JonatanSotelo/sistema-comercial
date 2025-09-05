@@ -8,6 +8,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
+from app.core.deps import require_admin
 
 router = APIRouter(prefix="/auditoria", tags=["Auditoría"])
 
@@ -42,7 +43,7 @@ def ensure_table():
         conn.execute(DDL_CREATE)
 
 @router.post("", summary="Registrar evento de auditoría")
-def add_event(data: AuditIn, db: Session = Depends(get_db)):
+def add_event(data: AuditIn, db: Session = Depends(get_db), _auth=Depends(require_admin)):
     q = text("INSERT INTO auditoria (actor, accion, detalle) VALUES (:actor, :accion, CAST(:detalle AS JSONB)) RETURNING id, ts;")
     row = db.execute(q, {
         "actor": data.actor,
@@ -57,6 +58,7 @@ def list_events(
     offset: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
     db: Session = Depends(get_db),
+    _auth=Depends(require_admin),
 ):
     rows = db.execute(
         text("SELECT id, ts, actor, accion, detalle FROM auditoria ORDER BY ts DESC, id DESC OFFSET :o LIMIT :l"),
@@ -65,7 +67,7 @@ def list_events(
     return {"items": [dict(r) for r in rows], "offset": offset, "limit": limit}
 
 @router.get("/{event_id}", summary="Obtener evento por id")
-def get_event(event_id: int, db: Session = Depends(get_db)):
+def get_event(event_id: int, db: Session = Depends(get_db), _auth=Depends(require_admin)):
     row = db.execute(
         text("SELECT id, ts, actor, accion, detalle FROM auditoria WHERE id=:id"),
         {"id": event_id}
@@ -75,7 +77,7 @@ def get_event(event_id: int, db: Session = Depends(get_db)):
     return dict(row)
 
 @router.delete("/{event_id}", summary="Borrar evento por id")
-def delete_event(event_id: int, db: Session = Depends(get_db)):
+def delete_event(event_id: int, db: Session = Depends(get_db), _auth=Depends(require_admin)):
     res = db.execute(text("DELETE FROM auditoria WHERE id=:id"), {"id": event_id})
     db.commit()
     if res.rowcount == 0:

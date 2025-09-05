@@ -6,16 +6,17 @@
 ```bash
 git clone <tu-repositorio>
 cd sistema-comercial
-docker-compose up -d
+cd infra
+docker compose up -d
 ```
 
 ### 2. **Configurar Base de Datos**
 ```bash
 # Ejecutar migraciones
-docker-compose exec backend alembic upgrade head
+docker compose exec backend alembic upgrade head
 
 # Poblar datos iniciales
-docker-compose exec backend python -c "from app.seed import run; run()"
+docker compose exec backend python -c "from app.seed import run; run()"
 ```
 
 ### 3. **¡Listo! Acceder al Sistema**
@@ -94,25 +95,25 @@ curl http://localhost:8000/monitoring/status
 #### **Sistema no responde**
 ```bash
 # Ver logs
-docker-compose logs -f backend
+docker compose logs -f backend
 
 # Reiniciar
-docker-compose restart backend
+docker compose restart backend
 ```
 
 #### **Error de base de datos**
 ```bash
 # Verificar PostgreSQL
-docker-compose ps postgres
+docker compose ps db
 
 # Reiniciar base de datos
-docker-compose restart postgres
+docker compose restart db
 ```
 
 #### **Error de autenticación**
 ```bash
 # Verificar usuario admin
-docker-compose exec backend python -c "
+docker compose exec backend python -c "
 from app.db.database import SessionLocal
 from app.models.user_model import User
 db = SessionLocal()
