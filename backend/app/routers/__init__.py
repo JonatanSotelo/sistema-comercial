@@ -18,6 +18,9 @@ from app.routers.notificacion_router import router as notificacion_router
 from app.routers.descuento_router import router as descuento_router  # 👈 nuevo
 from app.routers.inventario_router import router as inventario_router  # 👈 nuevo
 from app.routers.precio_router import router as precio_router  # 👈 nuevo
+from app.routers.reporte_financiero_router import router as reporte_financiero_router  # 👈 nuevo
+from app.routers.proveedor_integracion_router import router as proveedor_integracion_router  # 👈 nuevo
+from app.routers.metricas_rendimiento_router import router as metricas_rendimiento_router  # 👈 nuevo
 
 def register_routers(app: FastAPI) -> None:
     app.include_router(health_router)
@@ -36,3 +39,6 @@ def register_routers(app: FastAPI) -> None:
     app.include_router(descuento_router)
     app.include_router(inventario_router)
     app.include_router(precio_router)
+    app.include_router(reporte_financiero_router)
+    app.include_router(proveedor_integracion_router)  # 👈 nuevo
+    app.include_router(metricas_rendimiento_router)  # 👈 nuevo

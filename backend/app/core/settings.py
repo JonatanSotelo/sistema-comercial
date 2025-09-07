@@ -8,7 +8,8 @@ class Settings(BaseSettings):
     ENV: str = "development"
     
     # Base de datos
-    DATABASE_URL: str = "postgresql+psycopg2://postgres:postgres@sc_postgres:5432/postgres"
+    DATABASE_URL: str = "postgresql+psycopg2://sc_user:sc_pass@db:5432/sc_db"
+    DATABASE_URL: str = "sqlite:///./test.db"
     BACKUP_DATABASE_URL: str | None = None
     
     # JWT Configuration

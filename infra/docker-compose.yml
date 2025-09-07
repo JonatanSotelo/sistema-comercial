@@ -40,7 +40,6 @@ services:
       dockerfile: backend/Dockerfile
     container_name: sc_backend
     environment:
-      # Usa la env para overridear el default de settings.py
       DATABASE_URL: postgresql+psycopg2://sc_user:sc_pass@db:5432/sc_db
       ADMIN_USERNAME: admin
       ADMIN_PASSWORD: admin123
@@ -56,6 +55,24 @@ services:
         condition: service_started
     command: >
       uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  frontend:
+    build:
+      context: ../frontend           # ⬅️ MUY IMPORTANTE: apunta a carpeta con package.json
+      dockerfile: Dockerfile
+    container_name: sc_frontend
+    environment:
+      - VITE_API_BASE=http://backend:8000
+      - CHOKIDAR_USEPOLLING=true
+    volumes:
+      - ../frontend:/app
+      - /app/node_modules            # volumen anónimo para no pisar node_modules
+    ports:
+      - "3000:3000"
+    depends_on:
+      backend:
+        condition: service_started
+    command: ["npm","run","dev","--","--host","0.0.0.0","--port","3000"]
 
 volumes:
   pg_data:

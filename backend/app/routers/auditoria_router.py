@@ -21,11 +21,11 @@ router = APIRouter(prefix="/auditoria", tags=["Auditoría"])
 
 DDL_CREATE = text("""
 CREATE TABLE IF NOT EXISTS auditoria (
-    id BIGSERIAL PRIMARY KEY,
-    ts TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     actor TEXT,
     accion TEXT NOT NULL,
-    detalle JSONB
+    detalle TEXT
 );
 """)
 
@@ -44,7 +44,7 @@ def ensure_table():
 
 @router.post("", summary="Registrar evento de auditoría")
 def add_event(data: AuditIn, db: Session = Depends(get_db), _auth=Depends(require_admin)):
-    q = text("INSERT INTO auditoria (actor, accion, detalle) VALUES (:actor, :accion, CAST(:detalle AS JSONB)) RETURNING id, ts;")
+    q = text("INSERT INTO auditoria (actor, accion, detalle) VALUES (:actor, :accion, :detalle) RETURNING id, ts;")
     row = db.execute(q, {
         "actor": data.actor,
         "accion": data.accion,
