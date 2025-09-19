@@ -1,309 +1,271 @@
-# app/services/notificacion_service.py
-from sqlalchemy.orm import Session
-from sqlalchemy import and_, or_, func, desc
-from datetime import datetime, timedelta
 from typing import List, Optional, Dict, Any
+from sqlalchemy.orm import Session
+from sqlalchemy import and_, or_, desc, func
+from datetime import datetime, timedelta
 import json
 
-from app.models.notificacion_model import Notificacion, NotificacionUsuario, TipoNotificacion, EstadoNotificacion
+from app.models.notificacion_model import Notificacion
 from app.schemas.notificacion_schema import (
-    NotificacionCreate, NotificacionUpdate, NotificacionResumen, 
-    NotificacionFiltros, NotificacionStats, NotificacionTemplate
+    NotificacionCreate, 
+    NotificacionUpdate, 
+    NotificacionFiltros,
+    NotificacionStats
 )
 
 class NotificacionService:
-    
     @staticmethod
-    def crear_notificacion(db: Session, notificacion: NotificacionCreate) -> Notificacion:
-        """Crea una nueva notificación"""
-        # Convertir datos_adicionales a JSON string si existe
-        datos_json = None
-        if notificacion.datos_adicionales:
-            datos_json = json.dumps(notificacion.datos_adicionales)
-        
-        db_notificacion = Notificacion(
-            titulo=notificacion.titulo,
-            mensaje=notificacion.mensaje,
-            tipo=notificacion.tipo,
-            es_urgente=notificacion.es_urgente,
-            requiere_accion=notificacion.requiere_accion,
-            usuario_id=notificacion.usuario_id,
-            entidad_tipo=notificacion.entidad_tipo,
-            entidad_id=notificacion.entidad_id,
-            datos_adicionales=datos_json,
-            estado=EstadoNotificacion.PENDIENTE
-        )
-        
+    def create(db: Session, notificacion: NotificacionCreate) -> Notificacion:
+        """Crear una nueva notificación"""
+        db_notificacion = Notificacion(**notificacion.dict())
         db.add(db_notificacion)
         db.commit()
         db.refresh(db_notificacion)
-        
         return db_notificacion
-    
+
     @staticmethod
-    def obtener_notificaciones(
-        db: Session, 
-        usuario_id: Optional[int] = None,
-        filtros: Optional[NotificacionFiltros] = None,
-        skip: int = 0,
-        limit: int = 100
-    ) -> List[Notificacion]:
-        """Obtiene notificaciones con filtros"""
-        query = db.query(Notificacion)
-        
-        # Filtrar por usuario (notificaciones globales + del usuario)
-        if usuario_id:
-            query = query.filter(
-                or_(
-                    Notificacion.usuario_id == usuario_id,
-                    Notificacion.usuario_id.is_(None)  # Notificaciones globales
-                )
-            )
-        
-        # Aplicar filtros adicionales
-        if filtros:
-            if filtros.tipo:
-                query = query.filter(Notificacion.tipo == filtros.tipo)
-            if filtros.estado:
-                query = query.filter(Notificacion.estado == filtros.estado)
-            if filtros.es_urgente is not None:
-                query = query.filter(Notificacion.es_urgente == filtros.es_urgente)
-            if filtros.fecha_desde:
-                query = query.filter(Notificacion.fecha_creacion >= filtros.fecha_desde)
-            if filtros.fecha_hasta:
-                query = query.filter(Notificacion.fecha_creacion <= filtros.fecha_hasta)
-        
-        return query.order_by(desc(Notificacion.fecha_creacion)).offset(skip).limit(limit).all()
-    
-    @staticmethod
-    def obtener_notificacion(db: Session, notificacion_id: int) -> Optional[Notificacion]:
-        """Obtiene una notificación por ID"""
+    def get_by_id(db: Session, notificacion_id: int) -> Optional[Notificacion]:
+        """Obtener notificación por ID"""
         return db.query(Notificacion).filter(Notificacion.id == notificacion_id).first()
-    
+
     @staticmethod
-    def actualizar_notificacion(
-        db: Session, 
-        notificacion_id: int, 
-        notificacion_update: NotificacionUpdate
-    ) -> Optional[Notificacion]:
-        """Actualiza una notificación"""
-        db_notificacion = db.query(Notificacion).filter(Notificacion.id == notificacion_id).first()
+    def get_all(db: Session, filtros: NotificacionFiltros) -> List[Notificacion]:
+        """Obtener todas las notificaciones con filtros"""
+        query = db.query(Notificacion)
+
+        # Aplicar filtros
+        if filtros.tipo:
+            query = query.filter(Notificacion.tipo == filtros.tipo)
         
-        if not db_notificacion:
-            return None
+        if filtros.estado:
+            query = query.filter(Notificacion.estado == filtros.estado)
         
-        if notificacion_update.estado:
-            db_notificacion.estado = notificacion_update.estado
-            
-            # Si se marca como enviada, actualizar fecha_envio
-            if notificacion_update.estado == EstadoNotificacion.ENVIADA:
-                db_notificacion.fecha_envio = datetime.utcnow()
-            
-            # Si se marca como leída, actualizar fecha_lectura
-            if notificacion_update.estado == EstadoNotificacion.LEIDA:
-                db_notificacion.fecha_lectura = notificacion_update.fecha_lectura or datetime.utcnow()
+        if filtros.es_urgente is not None:
+            query = query.filter(Notificacion.es_urgente == filtros.es_urgente)
         
-        if notificacion_update.fecha_lectura:
-            db_notificacion.fecha_lectura = notificacion_update.fecha_lectura
+        if filtros.requiere_accion is not None:
+            query = query.filter(Notificacion.requiere_accion == filtros.requiere_accion)
+        
+        if filtros.usuario_id:
+            query = query.filter(Notificacion.usuario_id == filtros.usuario_id)
+        
+        if filtros.entidad_tipo:
+            query = query.filter(Notificacion.entidad_tipo == filtros.entidad_tipo)
+        
+        if filtros.fecha_desde:
+            query = query.filter(Notificacion.fecha_creacion >= filtros.fecha_desde)
+        
+        if filtros.fecha_hasta:
+            query = query.filter(Notificacion.fecha_creacion <= filtros.fecha_hasta)
+
+        # Ordenar por fecha de creación (más recientes primero)
+        query = query.order_by(desc(Notificacion.fecha_creacion))
+
+        # Paginación
+        offset = (filtros.page - 1) * filtros.per_page
+        return query.offset(offset).limit(filtros.per_page).all()
+
+    @staticmethod
+    def get_pendientes(db: Session, usuario_id: Optional[int] = None) -> List[Notificacion]:
+        """Obtener notificaciones pendientes (no leídas)"""
+        query = db.query(Notificacion).filter(Notificacion.estado != "LEIDA")
+        
+        if usuario_id:
+            query = query.filter(Notificacion.usuario_id == usuario_id)
+        
+        return query.order_by(desc(Notificacion.fecha_creacion)).all()
+
+    @staticmethod
+    def get_urgentes(db: Session, usuario_id: Optional[int] = None) -> List[Notificacion]:
+        """Obtener notificaciones urgentes"""
+        query = db.query(Notificacion).filter(Notificacion.es_urgente == True)
+        
+        if usuario_id:
+            query = query.filter(Notificacion.usuario_id == usuario_id)
+        
+        return query.order_by(desc(Notificacion.fecha_creacion)).all()
+
+    @staticmethod
+    def marcar_como_leida(db: Session, notificacion_id: int) -> Optional[Notificacion]:
+        """Marcar notificación como leída"""
+        notificacion = db.query(Notificacion).filter(Notificacion.id == notificacion_id).first()
+        if notificacion:
+            notificacion.estado = "LEIDA"
+            notificacion.fecha_lectura = datetime.utcnow()
+            db.commit()
+            db.refresh(notificacion)
+        return notificacion
+
+    @staticmethod
+    def marcar_todas_como_leidas(db: Session, usuario_id: Optional[int] = None) -> int:
+        """Marcar todas las notificaciones como leídas"""
+        query = db.query(Notificacion).filter(Notificacion.estado != "LEIDA")
+        
+        if usuario_id:
+            query = query.filter(Notificacion.usuario_id == usuario_id)
+        
+        notificaciones = query.all()
+        for notif in notificaciones:
+            notif.estado = "LEIDA"
+            notif.fecha_lectura = datetime.utcnow()
         
         db.commit()
-        db.refresh(db_notificacion)
-        
-        return db_notificacion
-    
+        return len(notificaciones)
+
     @staticmethod
-    def marcar_como_leida(db: Session, notificacion_id: int, usuario_id: Optional[int] = None) -> bool:
-        """Marca una notificación como leída"""
-        db_notificacion = db.query(Notificacion).filter(Notificacion.id == notificacion_id).first()
-        
-        if not db_notificacion:
-            return False
-        
-        # Verificar que el usuario tenga acceso a la notificación
-        if usuario_id and db_notificacion.usuario_id and db_notificacion.usuario_id != usuario_id:
-            return False
-        
-        db_notificacion.estado = EstadoNotificacion.LEIDA
-        db_notificacion.fecha_lectura = datetime.utcnow()
-        
-        db.commit()
-        return True
-    
+    def marcar_como_procesada(db: Session, notificacion_id: int) -> Optional[Notificacion]:
+        """Marcar notificación como procesada"""
+        notificacion = db.query(Notificacion).filter(Notificacion.id == notificacion_id).first()
+        if notificacion:
+            notificacion.procesada = True
+            notificacion.fecha_procesamiento = datetime.utcnow()
+            db.commit()
+            db.refresh(notificacion)
+        return notificacion
+
     @staticmethod
-    def obtener_resumen(db: Session, usuario_id: Optional[int] = None) -> NotificacionResumen:
-        """Obtiene resumen de notificaciones"""
+    def delete(db: Session, notificacion_id: int) -> bool:
+        """Eliminar notificación"""
+        notificacion = db.query(Notificacion).filter(Notificacion.id == notificacion_id).first()
+        if notificacion:
+            db.delete(notificacion)
+            db.commit()
+            return True
+        return False
+
+    @staticmethod
+    def get_stats(db: Session, usuario_id: Optional[int] = None) -> NotificacionStats:
+        """Obtener estadísticas de notificaciones"""
         query = db.query(Notificacion)
         
-        # Filtrar por usuario
         if usuario_id:
-            query = query.filter(
-                or_(
-                    Notificacion.usuario_id == usuario_id,
-                    Notificacion.usuario_id.is_(None)
-                )
-            )
+            query = query.filter(Notificacion.usuario_id == usuario_id)
         
-        # Contar totales
+        # Total de notificaciones
         total = query.count()
-        pendientes = query.filter(Notificacion.estado == EstadoNotificacion.PENDIENTE).count()
-        leidas = query.filter(Notificacion.estado == EstadoNotificacion.LEIDA).count()
+        
+        # No leídas
+        no_leidas = query.filter(Notificacion.estado != "LEIDA").count()
+        
+        # Urgentes
         urgentes = query.filter(Notificacion.es_urgente == True).count()
         
-        # Contar por tipo
-        por_tipo = {}
-        for tipo in TipoNotificacion:
-            count = query.filter(Notificacion.tipo == tipo).count()
-            por_tipo[tipo.value] = count
-        
-        return NotificacionResumen(
-            total=total,
-            pendientes=pendientes,
-            leidas=leidas,
-            urgentes=urgentes,
-            por_tipo=por_tipo
-        )
-    
-    @staticmethod
-    def obtener_estadisticas(db: Session, usuario_id: Optional[int] = None) -> NotificacionStats:
-        """Obtiene estadísticas detalladas de notificaciones"""
-        query = db.query(Notificacion)
-        
-        # Filtrar por usuario
-        if usuario_id:
-            query = query.filter(
-                or_(
-                    Notificacion.usuario_id == usuario_id,
-                    Notificacion.usuario_id.is_(None)
-                )
-            )
-        
-        # Estadísticas básicas
-        total_notificaciones = query.count()
-        
-        # Notificaciones por período
-        hoy = datetime.utcnow().date()
-        semana_pasada = hoy - timedelta(days=7)
-        mes_pasado = hoy - timedelta(days=30)
-        
-        notificaciones_hoy = query.filter(func.date(Notificacion.fecha_creacion) == hoy).count()
-        notificaciones_semana = query.filter(Notificacion.fecha_creacion >= semana_pasada).count()
-        notificaciones_mes = query.filter(Notificacion.fecha_creacion >= mes_pasado).count()
-        
-        # Tasa de lectura
-        leidas = query.filter(Notificacion.estado == EstadoNotificacion.LEIDA).count()
-        tasa_lectura = (leidas / total_notificaciones * 100) if total_notificaciones > 0 else 0.0
-        
         # Por tipo
-        notificaciones_por_tipo = {}
-        for tipo in TipoNotificacion:
-            count = query.filter(Notificacion.tipo == tipo).count()
-            notificaciones_por_tipo[tipo.value] = count
+        por_tipo = {}
+        tipos = db.query(Notificacion.tipo, func.count(Notificacion.id)).group_by(Notificacion.tipo).all()
+        for tipo, count in tipos:
+            por_tipo[tipo] = count
         
-        # Urgentes y pendientes
-        notificaciones_urgentes = query.filter(Notificacion.es_urgente == True).count()
-        notificaciones_pendientes = query.filter(Notificacion.estado == EstadoNotificacion.PENDIENTE).count()
+        # Por estado
+        por_estado = {}
+        estados = db.query(Notificacion.estado, func.count(Notificacion.id)).group_by(Notificacion.estado).all()
+        for estado, count in estados:
+            por_estado[estado] = count
         
         return NotificacionStats(
-            total_notificaciones=total_notificaciones,
-            notificaciones_hoy=notificaciones_hoy,
-            notificaciones_semana=notificaciones_semana,
-            notificaciones_mes=notificaciones_mes,
-            tasa_lectura=round(tasa_lectura, 2),
-            notificaciones_por_tipo=notificaciones_por_tipo,
-            notificaciones_urgentes=notificaciones_urgentes,
-            notificaciones_pendientes=notificaciones_pendientes
+            total=total,
+            no_leidas=no_leidas,
+            urgentes=urgentes,
+            por_tipo=por_tipo,
+            por_estado=por_estado
         )
-    
+
     @staticmethod
     def crear_notificacion_stock_bajo(
         db: Session, 
         producto_id: int, 
-        producto_nombre: str, 
-        stock_actual: float, 
-        stock_minimo: float
+        stock_actual: int, 
+        stock_minimo: int,
+        usuario_id: Optional[int] = None
     ) -> Notificacion:
-        """Crea notificación automática de stock bajo"""
+        """Crear notificación de stock bajo"""
+        diferencia = stock_minimo - stock_actual
+        porcentaje = (diferencia / stock_minimo) * 100 if stock_minimo > 0 else 0
+        
+        es_urgente = porcentaje >= 50
+        requiere_accion = porcentaje >= 25
+        
         notificacion = NotificacionCreate(
-            titulo=f"Stock bajo: {producto_nombre}",
-            mensaje=f"El producto '{producto_nombre}' tiene stock bajo. Actual: {stock_actual}, Mínimo: {stock_minimo}",
-            tipo=TipoNotificacion.STOCK_BAJO,
-            es_urgente=True,
-            requiere_accion=True,
-            entidad_tipo="producto",
+            tipo="STOCK_BAJO",
+            titulo=f"Stock bajo: Producto ID {producto_id}",
+            mensaje=f"El producto tiene {stock_actual} unidades en stock, pero el mínimo es {stock_minimo}. Faltan {diferencia} unidades ({porcentaje:.1f}% por debajo del mínimo).",
+            es_urgente=es_urgente,
+            requiere_accion=requiere_accion,
+            usuario_id=usuario_id,
             entidad_id=producto_id,
-            datos_adicionales={
+            entidad_tipo="producto",
+            datos_adicionales=json.dumps({
                 "producto_id": producto_id,
-                "producto_nombre": producto_nombre,
                 "stock_actual": stock_actual,
                 "stock_minimo": stock_minimo,
-                "diferencia": stock_actual - stock_minimo
-            }
+                "diferencia": diferencia,
+                "porcentaje": porcentaje
+            })
         )
         
-        return NotificacionService.crear_notificacion(db, notificacion)
-    
+        return NotificacionService.create(db, notificacion)
+
     @staticmethod
-    def crear_notificacion_venta_importante(
-        db: Session, 
-        venta_id: int, 
-        monto: float, 
-        cliente_nombre: Optional[str] = None
+    def crear_notificacion_venta_nueva(
+        db: Session,
+        venta_id: int,
+        monto: float,
+        cliente_nombre: str,
+        usuario_id: Optional[int] = None
     ) -> Notificacion:
-        """Crea notificación automática de venta importante"""
-        titulo = f"Venta importante: ${monto:,.2f}"
-        mensaje = f"Se realizó una venta importante por ${monto:,.2f}"
-        
-        if cliente_nombre:
-            mensaje += f" al cliente {cliente_nombre}"
-        
+        """Crear notificación de venta nueva"""
         notificacion = NotificacionCreate(
-            titulo=titulo,
-            mensaje=mensaje,
-            tipo=TipoNotificacion.VENTA_IMPORTANTE,
-            es_urgente=monto > 10000,  # Urgente si es mayor a $10,000
+            tipo="VENTA_IMPORTANTE",
+            titulo=f"Nueva venta: ${monto:,.2f}",
+            mensaje=f"Se registró una nueva venta por ${monto:,.2f} al cliente {cliente_nombre}.",
+            es_urgente=False,
             requiere_accion=False,
-            entidad_tipo="venta",
+            usuario_id=usuario_id,
             entidad_id=venta_id,
-            datos_adicionales={
+            entidad_tipo="venta",
+            datos_adicionales=json.dumps({
                 "venta_id": venta_id,
                 "monto": monto,
                 "cliente_nombre": cliente_nombre
-            }
+            })
         )
         
-        return NotificacionService.crear_notificacion(db, notificacion)
-    
+        return NotificacionService.create(db, notificacion)
+
     @staticmethod
     def crear_notificacion_sistema(
-        db: Session, 
-        titulo: str, 
-        mensaje: str, 
-        es_urgente: bool = False
+        db: Session,
+        titulo: str,
+        mensaje: str,
+        es_urgente: bool = False,
+        usuario_id: Optional[int] = None
     ) -> Notificacion:
-        """Crea notificación del sistema"""
+        """Crear notificación del sistema"""
         notificacion = NotificacionCreate(
+            tipo="SISTEMA",
             titulo=titulo,
             mensaje=mensaje,
-            tipo=TipoNotificacion.SISTEMA,
             es_urgente=es_urgente,
-            requiere_accion=False
+            requiere_accion=False,
+            usuario_id=usuario_id,
+            entidad_tipo="sistema"
         )
         
-        return NotificacionService.crear_notificacion(db, notificacion)
-    
+        return NotificacionService.create(db, notificacion)
+
     @staticmethod
     def limpiar_notificaciones_antiguas(db: Session, dias: int = 30) -> int:
-        """Limpia notificaciones antiguas (más de X días)"""
+        """Limpiar notificaciones antiguas"""
         fecha_limite = datetime.utcnow() - timedelta(days=dias)
-        
-        # Solo eliminar notificaciones leídas y no urgentes
-        notificaciones_eliminadas = db.query(Notificacion).filter(
+        notificaciones_antiguas = db.query(Notificacion).filter(
             and_(
                 Notificacion.fecha_creacion < fecha_limite,
-                Notificacion.estado == EstadoNotificacion.LEIDA,
-                Notificacion.es_urgente == False
+                Notificacion.estado == "LEIDA"
             )
-        ).delete()
+        ).all()
+        
+        count = len(notificaciones_antiguas)
+        for notif in notificaciones_antiguas:
+            db.delete(notif)
         
         db.commit()
-        return notificaciones_eliminadas
+        return count

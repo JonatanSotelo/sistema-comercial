@@ -1,8 +1,11 @@
 # app/services/venta_service.py
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
+from typing import Optional
 from app.models.venta_model import Venta, VentaItem
 from app.models.compra_model import StockMovimiento
 from app.models.producto_model import Producto
+from app.models.cliente_model import Cliente
 from app.schemas.venta_schema import VentaCreate
 from app.services.stock_service import stock_actual  # usamos la versión robusta (Python)
 
@@ -37,6 +40,8 @@ def crear_venta(db: Session, data: VentaCreate) -> Venta:
         venta = Venta(cliente_id=data.cliente_id)
         if data.fecha:
             venta.fecha = data.fecha
+        if data.observaciones:
+            venta.observaciones = data.observaciones
         db.add(venta)
         db.flush()  # para obtener venta.id
 
@@ -76,8 +81,23 @@ def crear_venta(db: Session, data: VentaCreate) -> Venta:
 def obtener_venta(db: Session, venta_id: int) -> Venta | None:
     return db.query(Venta).filter(Venta.id == venta_id).first()
 
-def listar_ventas(db: Session) -> list[Venta]:
-    return db.query(Venta).all()
+def listar_ventas(db: Session, page: int = 1, per_page: int = 20, search: Optional[str] = None) -> list[Venta]:
+    """Lista las ventas con paginación y búsqueda"""
+    query = db.query(Venta)
+    
+    # Aplicar filtro de búsqueda si se proporciona
+    if search:
+        query = query.join(Cliente).filter(
+            or_(
+                Venta.id.ilike(f"%{search}%"),
+                Cliente.nombre.ilike(f"%{search}%"),
+                Venta.observaciones.ilike(f"%{search}%")
+            )
+        )
+    
+    # Aplicar paginación
+    offset = (page - 1) * per_page
+    return query.offset(offset).limit(per_page).all()
 
 def actualizar_venta(db: Session, venta_id: int, data: VentaCreate) -> Venta | None:
     """

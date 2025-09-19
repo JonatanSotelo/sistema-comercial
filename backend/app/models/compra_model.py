@@ -9,6 +9,12 @@ class Compra(Base):
     proveedor_id = Column(Integer, ForeignKey("proveedores.id"), nullable=False, index=True)
     fecha = Column(DateTime(timezone=True), server_default=func.now())
     total = Column(Float, default=0)
+    descuento = Column(Float, default=0)
+    impuestos = Column(Float, default=0)
+    estado = Column(String, default="pendiente")
+    observaciones = Column(String, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     proveedor = relationship("Proveedor")  # lazy simple
     items = relationship("CompraItem", cascade="all, delete-orphan", back_populates="compra")

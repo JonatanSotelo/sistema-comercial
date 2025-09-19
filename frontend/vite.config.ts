@@ -2,22 +2,31 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { fileURLToPath, URL } from 'node:url'
 
+// https://vitejs.dev/config/
+// Permite configurar el target del backend via env (útil en Docker)
+const backendTarget = process.env.BACKEND_URL || 'http://localhost:8000'
+
+console.log('Backend target:', backendTarget)
+
 export default defineConfig({
   plugins: [react()],
   resolve: {
-    alias: { 
+    alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))
     }
   },
   server: {
-    host: true,           // equivale a 0.0.0.0
     port: 3000,
-    strictPort: true,
-    watch: { usePolling: true }, // Docker/WSL
     proxy: {
-      // ajustá el path según tu backend (ej.: '/api')
-      '/auth': { target: 'http://backend:8000', changeOrigin: true }
+      '/api': {
+        target: backendTarget,
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, '')
+      }
     }
   },
-  preview: { host: true, port: 3000 }
+  build: {
+    outDir: 'dist',
+    sourcemap: true
+  }
 })

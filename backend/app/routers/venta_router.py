@@ -1,6 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 
 from app.core.deps import get_current_user
 from app.db.database import get_db
@@ -12,8 +12,13 @@ from app.services.venta_service import (
 router = APIRouter(prefix="/ventas", tags=["Ventas"])
 
 @router.get("/", response_model=List[VentaOut])
-def listar(db: Session = Depends(get_db)):
-    return listar_ventas(db)
+def listar(
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=100),
+    search: Optional[str] = Query(None),
+    db: Session = Depends(get_db)
+):
+    return listar_ventas(db, page=page, per_page=per_page, search=search)
 
 @router.get("/{venta_id}", response_model=VentaOut)
 def obtener(venta_id: int, db: Session = Depends(get_db)):

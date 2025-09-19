@@ -7,9 +7,10 @@ class Settings(BaseSettings):
     API_PREFIX: str = ""
     ENV: str = "development"
     
-    # Base de datos
+    # Base de datos (env sobrescribe este valor)
+    # En Docker, compose define DATABASE_URL=postgresql+psycopg2://sc_user:sc_pass@db:5432/sc_db
+    # Para desarrollo local sin Docker, puedes cambiar a SQLite si querés:
     DATABASE_URL: str = "postgresql+psycopg2://sc_user:sc_pass@db:5432/sc_db"
-    DATABASE_URL: str = "sqlite:///./test.db"
     BACKUP_DATABASE_URL: str | None = None
     
     # JWT Configuration

@@ -13,6 +13,7 @@ class VentaCreate(BaseModel):
     cliente_id: Optional[int] = None
     items: List[VentaItemIn]
     fecha: Optional[datetime] = None
+    observaciones: Optional[str] = None
 
 class VentaItemOut(BaseModel):
     id: int
@@ -27,5 +28,11 @@ class VentaOut(BaseModel):
     cliente_id: Optional[int] = None
     fecha: datetime
     total: float
+    descuento: float
+    impuestos: float
+    estado: str
+    observaciones: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
     items: List[VentaItemOut]
     model_config = ConfigDict(from_attributes=True)

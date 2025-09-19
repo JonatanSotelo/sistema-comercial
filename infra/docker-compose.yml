@@ -27,7 +27,7 @@ services:
     image: dpage/pgadmin4:8.10
     container_name: sc_pgadmin
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@local
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
       PGADMIN_DEFAULT_PASSWORD: admin
     ports:
       - "5050:80"
@@ -43,6 +43,11 @@ services:
       DATABASE_URL: postgresql+psycopg2://sc_user:sc_pass@db:5432/sc_db
       ADMIN_USERNAME: admin
       ADMIN_PASSWORD: admin123
+      ADMIN_FORCE_UPDATE: "true"
+      ADMIN_EMAIL: admin@example.com
+      USER_USERNAME: user
+      USER_PASSWORD: user123
+      USER_EMAIL: user@example.com
     volumes:
       - ../backend:/app
       - backups_data:/app/backups
@@ -62,7 +67,7 @@ services:
       dockerfile: Dockerfile
     container_name: sc_frontend
     environment:
-      - VITE_API_BASE=http://backend:8000
+      - BACKEND_URL=http://backend:8000
       - CHOKIDAR_USEPOLLING=true
     volumes:
       - ../frontend:/app

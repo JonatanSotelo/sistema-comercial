@@ -1,7 +1,7 @@
 alembic==1.13.2
 annotated-types==0.7.0
 anyio==4.10.0
-bcrypt==4.3.0
+bcrypt==3.2.2
 click==8.2.1
 dnspython==2.7.0
 ecdsa==0.19.1
@@ -31,6 +31,7 @@ SQLAlchemy==2.0.31
 starlette==0.38.6
 typing_extensions==4.15.0
 uvicorn==0.30.6
+aiohttp==3.9.5
 
 # scheduler / tz / tests http client
 APScheduler==3.10.4

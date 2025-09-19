@@ -5,6 +5,7 @@ from typing import Any, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy import text
+from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
@@ -19,15 +20,34 @@ router = APIRouter(prefix="/auditoria", tags=["Auditoría"])
 #   accion text
 #   detalle jsonb
 
-DDL_CREATE = text("""
-CREATE TABLE IF NOT EXISTS auditoria (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    ts DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    actor TEXT,
-    accion TEXT NOT NULL,
-    detalle TEXT
-);
-""")
+def _ddl_create(engine: Engine):
+    """Devuelve el DDL acorde al motor (SQLite vs PostgreSQL)."""
+    backend = engine.url.get_backend_name()
+    if backend == "sqlite":
+        return text(
+            """
+            CREATE TABLE IF NOT EXISTS auditoria (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                ts DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                actor TEXT,
+                accion TEXT NOT NULL,
+                detalle TEXT
+            );
+            """
+        )
+    else:
+        # PostgreSQL u otros
+        return text(
+            """
+            CREATE TABLE IF NOT EXISTS auditoria (
+                id SERIAL PRIMARY KEY,
+                ts TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                actor TEXT,
+                accion TEXT NOT NULL,
+                detalle TEXT
+            );
+            """
+        )
 
 class AuditIn(BaseModel):
     accion: str
@@ -40,7 +60,7 @@ def ensure_table():
     # Si preferís centralizar, podés moverlo a main.py
     from app.db.database import engine
     with engine.begin() as conn:
-        conn.execute(DDL_CREATE)
+        conn.execute(_ddl_create(engine))
 
 @router.post("", summary="Registrar evento de auditoría")
 def add_event(data: AuditIn, db: Session = Depends(get_db), _auth=Depends(require_admin)):

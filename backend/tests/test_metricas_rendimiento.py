@@ -442,3 +442,14 @@ class TestMetricasRendimiento:
 
 
 
+
+
+
+
+
+
+
+
+
+
+

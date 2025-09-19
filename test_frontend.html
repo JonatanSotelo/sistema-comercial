@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Frontend-Backend</title>
+</head>
+<body>
+    <h1>Test de Conectividad Frontend-Backend</h1>
+    <button onclick="testBackend()">Probar Backend</button>
+    <div id="result"></div>
+
+    <script>
+        async function testBackend() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = 'Probando...';
+            
+            try {
+                const response = await fetch('http://localhost:8000/');
+                const data = await response.json();
+                resultDiv.innerHTML = `✅ Backend funcionando: ${JSON.stringify(data)}`;
+            } catch (error) {
+                resultDiv.innerHTML = `❌ Error: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>
+
+
+
+

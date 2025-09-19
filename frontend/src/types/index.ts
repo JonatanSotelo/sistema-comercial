@@ -152,6 +152,26 @@ export interface Cliente {
   updated_at: string;
 }
 
+export interface ClienteCreate {
+  nombre: string;
+  email?: string;
+  telefono?: string;
+  direccion?: string;
+  ciudad?: string;
+  codigo_postal?: string;
+  activo?: boolean;
+}
+
+export interface ClienteUpdate {
+  nombre?: string;
+  email?: string;
+  telefono?: string;
+  direccion?: string;
+  ciudad?: string;
+  codigo_postal?: string;
+  activo?: boolean;
+}
+
 // Tipos para proveedores
 export interface Proveedor {
   id: number;
@@ -164,6 +184,26 @@ export interface Proveedor {
   activo: boolean;
   created_at: string;
   updated_at: string;
+}
+
+export interface ProveedorCreate {
+  nombre: string;
+  email?: string;
+  telefono?: string;
+  direccion?: string;
+  ciudad?: string;
+  codigo_postal?: string;
+  activo?: boolean;
+}
+
+export interface ProveedorUpdate {
+  nombre?: string;
+  email?: string;
+  telefono?: string;
+  direccion?: string;
+  ciudad?: string;
+  codigo_postal?: string;
+  activo?: boolean;
 }
 
 // Tipos para ventas
@@ -179,6 +219,43 @@ export interface Venta {
   created_at: string;
   updated_at: string;
   cliente?: Cliente;
+  items?: VentaItem[];
+}
+
+export interface VentaItem {
+  id: number;
+  venta_id: number;
+  producto_id: number;
+  cantidad: number;
+  precio_unitario: number;
+  subtotal: number;
+  producto?: Producto;
+}
+
+export interface VentaCreate {
+  cliente_id: number;
+  fecha: string;
+  descuento?: number;
+  impuestos?: number;
+  estado?: string;
+  observaciones?: string;
+  items: VentaItemCreate[];
+}
+
+export interface VentaItemCreate {
+  producto_id: number;
+  cantidad: number;
+  precio_unitario: number;
+}
+
+export interface VentaUpdate {
+  cliente_id?: number;
+  fecha?: string;
+  descuento?: number;
+  impuestos?: number;
+  estado?: string;
+  observaciones?: string;
+  items?: VentaItemCreate[];
 }
 
 // Tipos para compras
@@ -194,9 +271,137 @@ export interface Compra {
   created_at: string;
   updated_at: string;
   proveedor?: Proveedor;
+  items?: CompraItem[];
+}
+
+export interface CompraItem {
+  id: number;
+  compra_id: number;
+  producto_id: number;
+  cantidad: number;
+  precio_unitario: number;
+  subtotal: number;
+  producto?: Producto;
+}
+
+export interface CompraCreate {
+  proveedor_id: number;
+  fecha: string;
+  descuento?: number;
+  impuestos?: number;
+  estado?: string;
+  observaciones?: string;
+  items: CompraItemCreate[];
+}
+
+export interface CompraItemCreate {
+  producto_id: number;
+  cantidad: number;
+  precio_unitario: number;
+}
+
+export interface CompraUpdate {
+  proveedor_id?: number;
+  fecha?: string;
+  descuento?: number;
+  impuestos?: number;
+  estado?: string;
+  observaciones?: string;
+  items?: CompraItemCreate[];
 }
 
 // Tipos para dashboard
+export interface DashboardCompleto {
+  resumen_ventas: {
+    total_ventas: number;
+    total_monto: number;
+    promedio_venta: number;
+    venta_mayor: number;
+    venta_menor: number;
+    ventas_hoy: number;
+    monto_hoy: number;
+  };
+  ventas_por_periodo: Array<{
+    periodo: string;
+    cantidad_ventas: number;
+    monto_total: number;
+    promedio: number;
+  }>;
+  productos_mas_vendidos: Array<{
+    producto_id: number;
+    producto_nombre: string;
+    cantidad_vendida: number;
+    monto_total: number;
+    ventas_count: number;
+  }>;
+  clientes_top: Array<{
+    cliente_id: number;
+    cliente_nombre: string;
+    cantidad_ventas: number;
+    monto_total: number;
+    promedio_compra: number;
+  }>;
+  stock_bajo: Array<{
+    producto_id: number;
+    producto_nombre: string;
+    stock_actual: number;
+    stock_minimo: number;
+    diferencia: number;
+    porcentaje: number;
+  }>;
+  metricas: {
+    ventas_ultimo_mes: number;
+    crecimiento_ventas: number;
+    productos_activos: number;
+    clientes_activos: number;
+    ticket_promedio: number;
+    conversion_rate: number;
+  };
+  tendencias: Array<{
+    fecha: string;
+    ventas: number;
+    monto: number;
+    crecimiento_diario: number;
+  }>;
+  ultima_actualizacion: string;
+}
+
+export interface EstadisticasVentas {
+  resumen: {
+    total_ventas: number;
+    total_monto: number;
+    promedio_venta: number;
+    venta_mayor: number;
+    venta_menor: number;
+    ventas_hoy: number;
+    monto_hoy: number;
+  };
+  productos_destacados: Array<{
+    producto_id: number;
+    producto_nombre: string;
+    cantidad_vendida: number;
+    monto_total: number;
+    ventas_count: number;
+  }>;
+  clientes_destacados: Array<{
+    cliente_id: number;
+    cliente_nombre: string;
+    cantidad_ventas: number;
+    monto_total: number;
+    promedio_compra: number;
+  }>;
+  tendencias: Array<{
+    fecha: string;
+    ventas: number;
+    monto: number;
+    crecimiento_diario: number;
+  }>;
+  filtros_aplicados: {
+    fecha_inicio: string | null;
+    fecha_fin: string | null;
+  };
+}
+
 export interface DashboardData {
   // Métricas principales
   ingresos_mes: number;
@@ -342,17 +547,19 @@ export interface FormularioCliente extends FormularioBase {
 // Tipos para notificaciones
 export interface Notificacion {
   id: number;
-  tipo: string;
   titulo: string;
   mensaje: string;
-  prioridad: 'baja' | 'normal' | 'alta' | 'urgente';
-  leida: boolean;
-  procesada: boolean;
+  tipo: 'STOCK_BAJO' | 'VENTA_IMPORTANTE' | 'SISTEMA' | 'MANTENIMIENTO' | 'ERROR' | 'INFO' | 'WARNING';
+  estado?: 'PENDIENTE' | 'ENVIADA' | 'LEIDA' | 'ARCHIVADA';
+  usuario_id?: number;
+  entidad_id?: number;
+  entidad_tipo?: string;
   fecha_creacion: string;
+  fecha_envio?: string;
   fecha_lectura?: string;
-  fecha_procesamiento?: string;
-  datos_adicionales?: Record<string, any>;
-  accion_requerida?: string;
+  es_urgente?: boolean;
+  requiere_accion?: boolean;
+  datos_adicionales?: string;
 }
 
 // Tipos para configuración
@@ -398,6 +605,95 @@ export interface SerieDatos {
   color?: string;
 }
 
+// Tipos para inventario
+export interface MovimientoStock {
+  id: number;
+  producto_id: number;
+  tipo: 'IN' | 'OUT' | 'AJUSTE' | 'TRANSFERENCIA';
+  cantidad: number;
+  motivo: string;
+  referencia?: string;
+  usuario_id?: number;
+  fecha: string;
+  observaciones?: string;
+  producto?: Producto;
+  usuario?: User;
+}
+
+export interface AlertaInventario {
+  id: number;
+  producto_id: number;
+  tipo: 'stock_bajo' | 'stock_critico' | 'agotado' | 'exceso' | 'vencimiento';
+  nivel: 'info' | 'warning' | 'error' | 'critical';
+  mensaje: string;
+  fecha_creacion: string;
+  fecha_resolucion?: string;
+  resuelta: boolean;
+  producto?: Producto;
+}
+
+export interface OrdenReabastecimiento {
+  id: number;
+  producto_id: number;
+  cantidad_solicitada: number;
+  cantidad_aprobada?: number;
+  estado: 'pendiente' | 'aprobada' | 'rechazada' | 'completada';
+  fecha_solicitud: string;
+  fecha_aprobacion?: string;
+  fecha_completado?: string;
+  solicitado_por?: number;
+  aprobado_por?: number;
+  observaciones?: string;
+  producto?: Producto;
+  solicitante?: User;
+  aprobador?: User;
+}
+
+export interface ConfiguracionInventario {
+  id: number;
+  producto_id: number;
+  stock_minimo: number;
+  stock_maximo: number;
+  punto_reorden: number;
+  dias_cobertura: number;
+  activo: boolean;
+  created_at: string;
+  updated_at: string;
+  producto?: Producto;
+}
+
+export interface ResumenInventario {
+  total_productos: number;
+  productos_stock_bajo: number;
+  productos_stock_critico: number;
+  productos_agotados: number;
+  alertas_pendientes: number;
+  alertas_urgentes: number;
+  valor_total_inventario: number;
+  movimientos_hoy: number;
+  reordenes_pendientes: number;
+}
+
+export interface EstadisticasInventario {
+  total_productos: number;
+  productos_configurados: number;
+  alertas_por_tipo: Record<string, number>;
+  movimientos_por_tipo: Record<string, number>;
+  valor_inventario_por_categoria: Record<string, number>;
+  productos_mas_movidos: Array<{
+    producto_id: number;
+    producto_nombre: string;
+    total_movimientos: number;
+  }>;
+  tendencia_stock: Array<{
+    fecha: string;
+    total_stock: number;
+    valor_total: number;
+  }>;
+  alertas_resueltas_mes: number;
+  tiempo_promedio_resolucion: number;
+}
+
 // Tipos para exportación
 export interface OpcionesExportacion {
   formato: 'pdf' | 'excel' | 'csv' | 'json';
@@ -407,6 +703,71 @@ export interface OpcionesExportacion {
   idioma: string;
   moneda: string;
 }
+
+// Tipos para Permisos y Roles
+export interface Permission {
+  id: number;
+  name: string;
+  description?: string;
+  module: string;
+  action: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface Role {
+  id: number;
+  name: string;
+  description?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  permissions: Permission[];
+}
+
+export interface UserCreate {
+  username: string;
+  email?: string;
+  password: string;
+  role: string;
+  is_active: boolean;
+}
+
+export interface UserUpdate {
+  username?: string;
+  email?: string;
+  password?: string;
+  role?: string;
+  is_active?: boolean;
+}
+
+export interface UserPermissions {
+  user_id: number;
+  username: string;
+  role: string;
+  permissions: Permission[];
+  modules_access: string[];
+}
+
+export interface RoleCreate {
+  name: string;
+  description?: string;
+  permission_ids: number[];
+}
+
+export interface RoleUpdate {
+  name?: string;
+  description?: string;
+  permission_ids?: number[];
+  is_active?: boolean;
+}
+
+
+
+
+
+
+
 
 
 

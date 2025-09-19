@@ -16,7 +16,7 @@ router = APIRouter(prefix="/users", tags=["Usuarios"])
 def listar(db: Session = Depends(get_db)):
     return svc.list_users(db)
 
-@router.get("/usuarios/me", response_model=UserOut)
+@router.get("/me", response_model=UserOut)
 def yo(user = Depends(get_current_user)):
     return user
 

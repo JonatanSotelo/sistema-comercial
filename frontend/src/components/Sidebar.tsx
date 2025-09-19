@@ -7,10 +7,13 @@ import {
   Truck, 
   ShoppingCart, 
   ShoppingBag, 
+  Warehouse,
   BarChart3, 
   FileText, 
   Settings,
-  Building2
+  Building2,
+  UserCog,
+  Shield
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { clsx } from 'clsx';
@@ -26,8 +29,11 @@ const navigation = [
   { name: 'Proveedores', href: '/proveedores', icon: Truck },
   { name: 'Ventas', href: '/ventas', icon: ShoppingCart },
   { name: 'Compras', href: '/compras', icon: ShoppingBag },
+  { name: 'Inventario', href: '/inventario', icon: Warehouse },
   { name: 'Métricas', href: '/metricas', icon: BarChart3 },
   { name: 'Reportes', href: '/reportes', icon: FileText },
+  { name: 'Usuarios', href: '/usuarios', icon: UserCog, adminOnly: true },
+  { name: 'Roles', href: '/roles', icon: Shield, adminOnly: true },
   { name: 'Configuración', href: '/configuracion', icon: Settings },
 ];
 
@@ -53,6 +59,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
       {/* Navegación */}
       <nav className="flex-1 space-y-1 px-3 py-4">
         {navigation.map((item) => {
+          // Verificar si el usuario puede ver este elemento
+          if (item.adminOnly && user?.role !== 'admin') {
+            return null;
+          }
+          
           const isActive = location.pathname === item.href;
           const Icon = item.icon;
           
@@ -103,6 +114,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
     </div>
   );
 };
+
+
+
+
+
+
+
 
 
 

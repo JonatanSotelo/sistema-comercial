@@ -1,283 +1,312 @@
-# app/routers/notificacion_router.py
-from fastapi import APIRouter, Depends, Query, HTTPException, status
+from typing import List, Optional
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
-from typing import Optional, List
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from app.db.database import get_db
-from app.core.deps import require_user, require_admin
 from app.services.notificacion_service import NotificacionService
 from app.schemas.notificacion_schema import (
-    NotificacionCreate, NotificacionUpdate, NotificacionOut, 
-    NotificacionResumen, NotificacionFiltros, NotificacionStats,
-    NotificacionBulkUpdate, TipoNotificacion, EstadoNotificacion
+    NotificacionCreate,
+    NotificacionUpdate,
+    NotificacionOut,
+    NotificacionBulkUpdate,
+    NotificacionStats,
+    NotificacionFiltros
 )
+from app.core.auth import get_current_user
+from app.models.user_model import User
 
 router = APIRouter(prefix="/notificaciones", tags=["Notificaciones"])
 
-@router.post("", response_model=NotificacionOut, summary="Crear notificación")
-def crear_notificacion(
-    notificacion: NotificacionCreate,
-    db: Session = Depends(get_db),
-    _auth=Depends(require_admin)  # Solo admins pueden crear notificaciones
-):
-    """
-    Crea una nueva notificación en el sistema.
-    Solo usuarios administradores pueden crear notificaciones.
-    """
-    return NotificacionService.crear_notificacion(db, notificacion)
-
-@router.get("", response_model=List[NotificacionOut], summary="Listar notificaciones")
-def listar_notificaciones(
-    skip: int = Query(0, ge=0, description="Número de notificaciones a omitir"),
-    limit: int = Query(100, ge=1, le=1000, description="Número máximo de notificaciones a retornar"),
-    tipo: Optional[TipoNotificacion] = Query(None, description="Filtrar por tipo de notificación"),
-    estado: Optional[EstadoNotificacion] = Query(None, description="Filtrar por estado"),
+@router.get("/", response_model=List[NotificacionOut])
+def get_notificaciones(
+    tipo: Optional[str] = Query(None, description="Filtrar por tipo de notificación"),
+    estado: Optional[str] = Query(None, description="Filtrar por estado"),
     es_urgente: Optional[bool] = Query(None, description="Filtrar por urgencia"),
-    fecha_desde: Optional[datetime] = Query(None, description="Fecha desde (YYYY-MM-DD)"),
-    fecha_hasta: Optional[datetime] = Query(None, description="Fecha hasta (YYYY-MM-DD)"),
+    requiere_accion: Optional[bool] = Query(None, description="Filtrar por requerimiento de acción"),
+    usuario_id: Optional[int] = Query(None, description="Filtrar por usuario"),
+    entidad_tipo: Optional[str] = Query(None, description="Filtrar por tipo de entidad"),
+    fecha_desde: Optional[datetime] = Query(None, description="Fecha desde"),
+    fecha_hasta: Optional[datetime] = Query(None, description="Fecha hasta"),
+    page: int = Query(1, ge=1, description="Número de página"),
+    per_page: int = Query(50, ge=1, le=100, description="Elementos por página"),
     db: Session = Depends(get_db),
-    current_user=Depends(require_user)
+    current_user: User = Depends(get_current_user)
 ):
-    """
-    Lista notificaciones del usuario actual con filtros opcionales.
-    Incluye notificaciones globales y del usuario específico.
-    """
+    """Obtener todas las notificaciones con filtros"""
     filtros = NotificacionFiltros(
         tipo=tipo,
         estado=estado,
         es_urgente=es_urgente,
+        requiere_accion=requiere_accion,
+        usuario_id=usuario_id or current_user.id,
+        entidad_tipo=entidad_tipo,
         fecha_desde=fecha_desde,
         fecha_hasta=fecha_hasta,
-        usuario_id=current_user.id
+        page=page,
+        per_page=per_page
     )
     
-    return NotificacionService.obtener_notificaciones(
-        db, 
-        usuario_id=current_user.id,
-        filtros=filtros,
-        skip=skip,
-        limit=limit
-    )
+    notificaciones = NotificacionService.get_all(db, filtros)
+    return notificaciones
 
-@router.get("/{notificacion_id}", response_model=NotificacionOut, summary="Obtener notificación")
-def obtener_notificacion(
+@router.get("/pendientes", response_model=List[NotificacionOut])
+def get_notificaciones_pendientes(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Obtener notificaciones pendientes (no leídas)"""
+    notificaciones = NotificacionService.get_pendientes(db, current_user.id)
+    return notificaciones
+
+@router.get("/urgentes", response_model=List[NotificacionOut])
+def get_notificaciones_urgentes(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Obtener notificaciones urgentes"""
+    notificaciones = NotificacionService.get_urgentes(db, current_user.id)
+    return notificaciones
+
+@router.get("/stats", response_model=NotificacionStats)
+def get_notificaciones_stats(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Obtener estadísticas de notificaciones"""
+    stats = NotificacionService.get_stats(db, current_user.id)
+    return stats
+
+@router.get("/{notificacion_id}", response_model=NotificacionOut)
+def get_notificacion(
     notificacion_id: int,
     db: Session = Depends(get_db),
-    current_user=Depends(require_user)
+    current_user: User = Depends(get_current_user)
 ):
-    """
-    Obtiene una notificación específica por ID.
-    Solo se pueden acceder a notificaciones propias o globales.
-    """
-    notificacion = NotificacionService.obtener_notificacion(db, notificacion_id)
-    
+    """Obtener notificación por ID"""
+    notificacion = NotificacionService.get_by_id(db, notificacion_id)
     if not notificacion:
-        raise HTTPException(status_code=404, detail="Notificación no encontrada")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Notificación no encontrada"
+        )
     
-    # Verificar acceso (global o del usuario)
-    if notificacion.usuario_id and notificacion.usuario_id != current_user.id:
-        raise HTTPException(status_code=403, detail="No tienes acceso a esta notificación")
+    # Verificar que la notificación pertenece al usuario (si no es admin)
+    if current_user.role != "admin" and notificacion.usuario_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes permisos para ver esta notificación"
+        )
     
     return notificacion
 
-@router.put("/{notificacion_id}", response_model=NotificacionOut, summary="Actualizar notificación")
-def actualizar_notificacion(
-    notificacion_id: int,
-    notificacion_update: NotificacionUpdate,
+@router.post("/", response_model=NotificacionOut, status_code=status.HTTP_201_CREATED)
+def create_notificacion(
+    notificacion: NotificacionCreate,
     db: Session = Depends(get_db),
-    current_user=Depends(require_user)
+    current_user: User = Depends(get_current_user)
 ):
-    """
-    Actualiza una notificación específica.
-    Los usuarios solo pueden actualizar sus propias notificaciones.
-    """
-    notificacion = NotificacionService.obtener_notificacion(db, notificacion_id)
+    """Crear nueva notificación"""
+    # Solo admins pueden crear notificaciones manualmente
+    if current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Solo los administradores pueden crear notificaciones manualmente"
+        )
     
-    if not notificacion:
-        raise HTTPException(status_code=404, detail="Notificación no encontrada")
-    
-    # Verificar acceso
-    if notificacion.usuario_id and notificacion.usuario_id != current_user.id:
-        raise HTTPException(status_code=403, detail="No tienes acceso a esta notificación")
-    
-    return NotificacionService.actualizar_notificacion(db, notificacion_id, notificacion_update)
+    db_notificacion = NotificacionService.create(db, notificacion)
+    return db_notificacion
 
-@router.patch("/{notificacion_id}/leer", summary="Marcar como leída")
+@router.patch("/{notificacion_id}/leer", response_model=NotificacionOut)
 def marcar_como_leida(
     notificacion_id: int,
     db: Session = Depends(get_db),
-    current_user=Depends(require_user)
+    current_user: User = Depends(get_current_user)
 ):
-    """
-    Marca una notificación como leída.
-    """
-    success = NotificacionService.marcar_como_leida(db, notificacion_id, current_user.id)
+    """Marcar notificación como leída"""
+    notificacion = NotificacionService.get_by_id(db, notificacion_id)
+    if not notificacion:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Notificación no encontrada"
+        )
     
-    if not success:
-        raise HTTPException(status_code=404, detail="Notificación no encontrada o sin acceso")
+    # Verificar que la notificación pertenece al usuario (si no es admin)
+    if current_user.role != "admin" and notificacion.usuario_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes permisos para modificar esta notificación"
+        )
     
-    return {"message": "Notificación marcada como leída"}
+    notificacion_actualizada = NotificacionService.marcar_como_leida(db, notificacion_id)
+    return notificacion_actualizada
 
-@router.patch("/bulk/leer", summary="Marcar múltiples como leídas")
-def marcar_multiples_como_leidas(
-    notificacion_ids: List[int],
+@router.patch("/bulk/leer", response_model=dict)
+def marcar_todas_como_leidas(
     db: Session = Depends(get_db),
-    current_user=Depends(require_user)
+    current_user: User = Depends(get_current_user)
 ):
-    """
-    Marca múltiples notificaciones como leídas.
-    """
-    marcadas = 0
-    for notificacion_id in notificacion_ids:
-        if NotificacionService.marcar_como_leida(db, notificacion_id, current_user.id):
-            marcadas += 1
-    
-    return {"message": f"{marcadas} notificaciones marcadas como leídas"}
+    """Marcar todas las notificaciones como leídas"""
+    count = NotificacionService.marcar_todas_como_leidas(db, current_user.id)
+    return {"message": f"Se marcaron {count} notificaciones como leídas"}
 
-@router.get("/resumen", response_model=NotificacionResumen, summary="Resumen de notificaciones")
-def obtener_resumen(
-    db: Session = Depends(get_db),
-    current_user=Depends(require_user)
-):
-    """
-    Obtiene un resumen de las notificaciones del usuario.
-    Incluye contadores por estado y tipo.
-    """
-    return NotificacionService.obtener_resumen(db, current_user.id)
-
-@router.get("/estadisticas", response_model=NotificacionStats, summary="Estadísticas de notificaciones")
-def obtener_estadisticas(
-    db: Session = Depends(get_db),
-    current_user=Depends(require_user)
-):
-    """
-    Obtiene estadísticas detalladas de las notificaciones.
-    Incluye métricas temporales y tasas de lectura.
-    """
-    return NotificacionService.obtener_estadisticas(db, current_user.id)
-
-@router.get("/pendientes", response_model=List[NotificacionOut], summary="Notificaciones pendientes")
-def obtener_pendientes(
-    limit: int = Query(50, ge=1, le=200, description="Número máximo de notificaciones"),
-    db: Session = Depends(get_db),
-    current_user=Depends(require_user)
-):
-    """
-    Obtiene notificaciones pendientes del usuario.
-    Útil para mostrar alertas en tiempo real.
-    """
-    filtros = NotificacionFiltros(
-        estado=EstadoNotificacion.PENDIENTE,
-        usuario_id=current_user.id
-    )
-    
-    return NotificacionService.obtener_notificaciones(
-        db,
-        usuario_id=current_user.id,
-        filtros=filtros,
-        skip=0,
-        limit=limit
-    )
-
-@router.get("/urgentes", response_model=List[NotificacionOut], summary="Notificaciones urgentes")
-def obtener_urgentes(
-    limit: int = Query(20, ge=1, le=100, description="Número máximo de notificaciones"),
-    db: Session = Depends(get_db),
-    current_user=Depends(require_user)
-):
-    """
-    Obtiene notificaciones urgentes del usuario.
-    Incluye notificaciones marcadas como urgentes.
-    """
-    filtros = NotificacionFiltros(
-        es_urgente=True,
-        usuario_id=current_user.id
-    )
-    
-    return NotificacionService.obtener_notificaciones(
-        db,
-        usuario_id=current_user.id,
-        filtros=filtros,
-        skip=0,
-        limit=limit
-    )
-
-@router.delete("/{notificacion_id}", summary="Eliminar notificación")
-def eliminar_notificacion(
+@router.patch("/{notificacion_id}/procesar", response_model=NotificacionOut)
+def marcar_como_procesada(
     notificacion_id: int,
     db: Session = Depends(get_db),
-    _auth=Depends(require_admin)  # Solo admins pueden eliminar
+    current_user: User = Depends(get_current_user)
 ):
-    """
-    Elimina una notificación del sistema.
-    Solo usuarios administradores pueden eliminar notificaciones.
-    """
-    notificacion = NotificacionService.obtener_notificacion(db, notificacion_id)
-    
+    """Marcar notificación como procesada"""
+    notificacion = NotificacionService.get_by_id(db, notificacion_id)
     if not notificacion:
-        raise HTTPException(status_code=404, detail="Notificación no encontrada")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Notificación no encontrada"
+        )
     
-    db.delete(notificacion)
-    db.commit()
+    # Verificar que la notificación pertenece al usuario (si no es admin)
+    if current_user.role != "admin" and notificacion.usuario_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes permisos para modificar esta notificación"
+        )
     
-    return {"message": "Notificación eliminada"}
+    notificacion_actualizada = NotificacionService.marcar_como_procesada(db, notificacion_id)
+    return notificacion_actualizada
 
-@router.post("/limpiar", summary="Limpiar notificaciones antiguas")
-def limpiar_antiguas(
+@router.put("/{notificacion_id}", response_model=NotificacionOut)
+def update_notificacion(
+    notificacion_id: int,
+    notificacion_update: NotificacionUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Actualizar notificación"""
+    notificacion = NotificacionService.get_by_id(db, notificacion_id)
+    if not notificacion:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Notificación no encontrada"
+        )
+    
+    # Solo admins pueden actualizar notificaciones
+    if current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Solo los administradores pueden actualizar notificaciones"
+        )
+    
+    # Actualizar campos
+    for field, value in notificacion_update.dict(exclude_unset=True).items():
+        setattr(notificacion, field, value)
+    
+    db.commit()
+    db.refresh(notificacion)
+    return notificacion
+
+@router.delete("/{notificacion_id}")
+def delete_notificacion(
+    notificacion_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Eliminar notificación"""
+    notificacion = NotificacionService.get_by_id(db, notificacion_id)
+    if not notificacion:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Notificación no encontrada"
+        )
+    
+    # Verificar que la notificación pertenece al usuario (si no es admin)
+    if current_user.role != "admin" and notificacion.usuario_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes permisos para eliminar esta notificación"
+        )
+    
+    success = NotificacionService.delete(db, notificacion_id)
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error al eliminar la notificación"
+        )
+    
+    return {"message": "Notificación eliminada correctamente"}
+
+@router.post("/limpiar-antiguas")
+def limpiar_notificaciones_antiguas(
     dias: int = Query(30, ge=1, le=365, description="Días de antigüedad para limpiar"),
     db: Session = Depends(get_db),
-    _auth=Depends(require_admin)  # Solo admins pueden limpiar
+    current_user: User = Depends(get_current_user)
 ):
-    """
-    Limpia notificaciones antiguas del sistema.
-    Solo elimina notificaciones leídas y no urgentes.
-    """
-    eliminadas = NotificacionService.limpiar_notificaciones_antiguas(db, dias)
+    """Limpiar notificaciones antiguas (solo admins)"""
+    if current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Solo los administradores pueden limpiar notificaciones"
+        )
     
-    return {"message": f"{eliminadas} notificaciones eliminadas"}
+    count = NotificacionService.limpiar_notificaciones_antiguas(db, dias)
+    return {"message": f"Se eliminaron {count} notificaciones antiguas"}
 
-# Endpoints para notificaciones automáticas (solo para admins)
-@router.post("/stock-bajo", response_model=NotificacionOut, summary="Crear notificación de stock bajo")
+# Endpoints para crear notificaciones específicas (solo admins)
+@router.post("/stock-bajo")
 def crear_notificacion_stock_bajo(
     producto_id: int,
-    producto_nombre: str,
-    stock_actual: float,
-    stock_minimo: float,
+    stock_actual: int,
+    stock_minimo: int,
     db: Session = Depends(get_db),
-    _auth=Depends(require_admin)
+    current_user: User = Depends(get_current_user)
 ):
-    """
-    Crea una notificación automática de stock bajo.
-    """
-    return NotificacionService.crear_notificacion_stock_bajo(
-        db, producto_id, producto_nombre, stock_actual, stock_minimo
+    """Crear notificación de stock bajo (solo admins)"""
+    if current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Solo los administradores pueden crear notificaciones de stock"
+        )
+    
+    notificacion = NotificacionService.crear_notificacion_stock_bajo(
+        db, producto_id, stock_actual, stock_minimo, current_user.id
     )
+    return notificacion
 
-@router.post("/venta-importante", response_model=NotificacionOut, summary="Crear notificación de venta importante")
-def crear_notificacion_venta_importante(
+@router.post("/venta-nueva")
+def crear_notificacion_venta_nueva(
     venta_id: int,
     monto: float,
-    cliente_nombre: Optional[str] = None,
+    cliente_nombre: str,
     db: Session = Depends(get_db),
-    _auth=Depends(require_admin)
+    current_user: User = Depends(get_current_user)
 ):
-    """
-    Crea una notificación automática de venta importante.
-    """
-    return NotificacionService.crear_notificacion_venta_importante(
-        db, venta_id, monto, cliente_nombre
+    """Crear notificación de venta nueva (solo admins)"""
+    if current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Solo los administradores pueden crear notificaciones de ventas"
+        )
+    
+    notificacion = NotificacionService.crear_notificacion_venta_nueva(
+        db, venta_id, monto, cliente_nombre, current_user.id
     )
+    return notificacion
 
-@router.post("/sistema", response_model=NotificacionOut, summary="Crear notificación del sistema")
+@router.post("/sistema")
 def crear_notificacion_sistema(
     titulo: str,
     mensaje: str,
-    es_urgente: bool = False,
+    prioridad: str = "normal",
     db: Session = Depends(get_db),
-    _auth=Depends(require_admin)
+    current_user: User = Depends(get_current_user)
 ):
-    """
-    Crea una notificación del sistema.
-    """
-    return NotificacionService.crear_notificacion_sistema(db, titulo, mensaje, es_urgente)
+    """Crear notificación del sistema (solo admins)"""
+    if current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Solo los administradores pueden crear notificaciones del sistema"
+        )
+    
+    notificacion = NotificacionService.crear_notificacion_sistema(
+        db, titulo, mensaje, prioridad, current_user.id
+    )
+    return notificacion

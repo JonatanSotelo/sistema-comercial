@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import apiService from '@/services/api';
 
 interface User {
   id: string;
@@ -10,6 +11,7 @@ interface User {
 interface AuthContextType {
   user: User | null;
   login: (username: string, password: string) => Promise<void>;
+  register?: (data: { username: string; email: string; password: string }) => Promise<void>;
   logout: () => void;
   isLoading: boolean;
   isAuthenticated: boolean;
@@ -34,63 +36,57 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      setUser({
-        id: '1',
-        username: 'admin',
-        email: 'admin@local',
-        role: 'admin'
-      });
-    }
-    setIsLoading(false);
+    const init = async () => {
+      const token = localStorage.getItem('access_token');
+      if (token) {
+        try {
+          const me: any = await apiService.getCurrentUser();
+          setUser({
+            id: String(me?.id ?? ''),
+            username: me?.username ?? '',
+            email: me?.email ?? '',
+            role: me?.role ?? 'user',
+          });
+        } catch {
+          localStorage.removeItem('access_token');
+        }
+      }
+      setIsLoading(false);
+    };
+    void init();
   }, []);
 
   const login = async (username: string, password: string) => {
-    try {
-      const response = await fetch('http://localhost:8000/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ username, password }),
-      });
+    await apiService.login(username, password);
+    const me: any = await apiService.getCurrentUser();
+    setUser({
+      id: String(me?.id ?? ''),
+      username: me?.username ?? '',
+      email: me?.email ?? '',
+      role: me?.role ?? 'user',
+    });
+  };
 
-      if (response.ok) {
-        const data = await response.json();
-        localStorage.setItem('token', data.access_token);
-        setUser({
-          id: data.user.id,
-          username: data.user.username,
-          email: data.user.email,
-          role: data.user.role
-        });
-      } else {
-        throw new Error('Credenciales inválidas');
-      }
-    } catch (error) {
-      console.warn('Backend no disponible, usando datos simulados');
-      localStorage.setItem('token', 'simulated-token');
-      setUser({
-        id: '1',
-        username: username,
-        email: `${username}@local`,
-        role: 'admin'
-      });
-    }
+  const register = async (data: { username: string; email: string; password: string }) => {
+    // Si el backend no tiene /auth/register, esto fallará y el caller mostrará el error.
+    await apiService.register(data as any);
   };
 
   const logout = () => {
-    localStorage.removeItem('token');
+    console.log('AuthContext: Iniciando logout...');
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('user');
     setUser(null);
+    console.log('AuthContext: Logout completado');
   };
 
   const value = {
     user,
     login,
+    register,
     logout,
     isLoading,
-    isAuthenticated: !!user
+    isAuthenticated: !!user,
   };
 
   return (

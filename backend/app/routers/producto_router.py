@@ -34,9 +34,10 @@ def _build_search_filter(search: str | None):
         cols.append(Producto.nombre.ilike(pattern))
     if hasattr(Producto, "descripcion"):
         cols.append(Producto.descripcion.ilike(pattern))
-    if hasattr(Producto, "sku"):
-        # por si agregás sku más adelante (no rompe si no existe)
-        cols.append(getattr(Producto, "sku").ilike(pattern))
+    if hasattr(Producto, "codigo"):
+        cols.append(Producto.codigo.ilike(pattern))
+    if hasattr(Producto, "categoria"):
+        cols.append(Producto.categoria.ilike(pattern))
     return or_(*cols) if cols else None
 
 def _parse_sort(sort: str | None):
@@ -44,8 +45,11 @@ def _parse_sort(sort: str | None):
         "id": getattr(Producto, "id", None),
         "nombre": getattr(Producto, "nombre", None),
         "precio": getattr(Producto, "precio", None),
+        "costo": getattr(Producto, "costo", None),
+        "stock": getattr(Producto, "stock", None),
+        "categoria": getattr(Producto, "categoria", None),
+        "codigo": getattr(Producto, "codigo", None),
         "descripcion": getattr(Producto, "descripcion", None),
-        "sku": getattr(Producto, "sku", None),
     }
     allowed = {k: v for k, v in allowed.items() if v is not None}
 
@@ -128,8 +132,7 @@ def exportar_excel(q: CommonQueryParams = Depends(common_params), db: Session = 
     ws.title = "Productos"
 
     # Encabezados
-    headers = ["ID", "Nombre", "Descripción", "Precio"]
-    # si tu modelo tiene más campos, agregalos acá (sku, stock, activo, etc.)
+    headers = ["ID", "Nombre", "Descripción", "Código", "Categoría", "Precio", "Costo", "Stock", "Stock Mínimo", "Activo"]
     ws.append(headers)
 
     for p in items:
@@ -137,7 +140,13 @@ def exportar_excel(q: CommonQueryParams = Depends(common_params), db: Session = 
             getattr(p, "id", None),
             getattr(p, "nombre", None),
             getattr(p, "descripcion", None),
+            getattr(p, "codigo", None),
+            getattr(p, "categoria", None),
             float(getattr(p, "precio", 0.0)) if getattr(p, "precio", None) is not None else None,
+            float(getattr(p, "costo", 0.0)) if getattr(p, "costo", None) is not None else None,
+            getattr(p, "stock", None),
+            getattr(p, "stock_minimo", None),
+            "Sí" if getattr(p, "activo", True) else "No",
         ])
 
     buf = BytesIO()

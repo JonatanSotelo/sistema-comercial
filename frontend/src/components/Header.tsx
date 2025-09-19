@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { Menu, Bell, Search, User, LogOut } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useNotificationContext } from '@/contexts/NotificationContext';
 import { useNavigate } from 'react-router-dom';
+import { Notifications } from './Notifications';
 
 interface HeaderProps {
   onMenuClick: () => void;
@@ -9,11 +11,15 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
   const { user, logout } = useAuth();
+  const { unreadCount, urgentCount } = useNotificationContext();
   const navigate = useNavigate();
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   const handleLogout = () => {
+    console.log('Iniciando logout...');
     logout();
+    console.log('Logout completado, navegando a login...');
     navigate('/login');
   };
 
@@ -56,13 +62,28 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
           <button
             type="button"
             className="relative rounded-full bg-white p-1 text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+            onClick={() => setShowNotifications(!showNotifications)}
           >
             <span className="sr-only">Ver notificaciones</span>
             <Bell className="h-6 w-6" />
             {/* Indicador de notificaciones */}
-            <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-error-500 text-xs text-white">
-              3
-            </span>
+            {unreadCount > 0 && (
+              <span className={`absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full text-xs text-white ${
+                urgentCount > 0 ? 'bg-red-500' : 'bg-blue-500'
+              }`}>
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </span>
+            )}
+          </button>
+
+          {/* Botón de logout directo */}
+          <button
+            type="button"
+            className="ml-3 rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600"
+            onClick={handleLogout}
+            title="Cerrar sesión"
+          >
+            <LogOut className="h-4 w-4" />
           </button>
 
           {/* Menú de usuario */}
@@ -116,9 +137,22 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
           </div>
         </div>
       </div>
+
+      {/* Panel de notificaciones */}
+      <Notifications 
+        isOpen={showNotifications} 
+        onClose={() => setShowNotifications(false)} 
+      />
     </header>
   );
 };
+
+
+
+
+
+
+
 
 
 

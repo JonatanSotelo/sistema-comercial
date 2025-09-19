@@ -86,3 +86,14 @@ export const ConfiguracionPage: React.FC = () => {
 
 
 
+
+
+
+
+
+
+
+
+
+
+

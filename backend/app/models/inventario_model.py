@@ -82,7 +82,8 @@ class AlertaInventario(Base):
     
     # Relaciones
     producto = relationship("Producto", backref="alertas_inventario")
-    resolutor = relationship("User", backref="alertas_resueltas")
+    # Evitar colisión de backref con otras alertas (métricas)
+    resolutor = relationship("User", backref="alertas_resueltas_inventario")
     
     def __repr__(self):
         return f"<AlertaInventario(id={self.id}, tipo='{self.tipo}', estado='{self.estado}')>"

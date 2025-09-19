@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, Float, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, Float, DateTime, ForeignKey, String, func
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.db.database import Base
@@ -10,6 +10,12 @@ class Venta(Base):
     cliente_id = Column(Integer, ForeignKey("clientes.id", ondelete="SET NULL"), nullable=True)
     fecha = Column(DateTime, default=datetime.utcnow, nullable=False)
     total = Column(Float, default=0.0, nullable=False)
+    descuento = Column(Float, default=0)
+    impuestos = Column(Float, default=0)
+    estado = Column(String, default="pendiente")
+    observaciones = Column(String, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     # LADO MUCHOS a UNO con Cliente (coincide el back_populates)
     cliente = relationship("Cliente", back_populates="ventas")

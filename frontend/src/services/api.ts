@@ -12,17 +12,36 @@ import {
   Venta,
   Compra,
   DashboardData,
+  DashboardCompleto,
+  EstadisticasVentas,
+  Notificacion,
+  MovimientoStock,
+  AlertaInventario,
+  OrdenReabastecimiento,
+  ConfiguracionInventario,
+  ResumenInventario,
+  EstadisticasInventario,
   ApiResponse,
   PaginatedResponse,
   FiltrosBase,
   FiltrosMetricas,
   FiltrosProductos,
   FiltrosClientes,
-  FiltrosVentas
+  FiltrosVentas,
+  Permission,
+  Role,
+  UserCreate,
+  UserUpdate,
+  UserPermissions,
+  RoleCreate,
+  RoleUpdate
 } from '@/types';
 
 // Configuración base de la API
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const isDev = (import.meta as any).env?.DEV ?? true;
+const API_BASE_URL = isDev
+  ? 'http://localhost:8000'
+  : ((import.meta as any).env?.VITE_API_URL || (import.meta as any).env?.VITE_API_BASE || 'http://localhost:8000');
 
 class ApiService {
   private api: AxiosInstance;
@@ -66,21 +85,9 @@ class ApiService {
   }
 
   // Métodos de autenticación
-  async login(username: string, password: string): Promise<AuthResponse> {
-    const formData = new FormData();
-    formData.append('username', username);
-    formData.append('password', password);
-
-    const response: AxiosResponse<AuthResponse> = await this.api.post('/auth/login', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-
-    // Guardar token y usuario en localStorage
+  async login(username: string, password: string): Promise<{ access_token: string; token_type: string }> {
+    const response = await this.api.post('/auth/login', { username, password });
     localStorage.setItem('access_token', response.data.access_token);
-    localStorage.setItem('user', JSON.stringify(response.data.user));
-
     return response.data;
   }
 
@@ -95,7 +102,7 @@ class ApiService {
   }
 
   async getCurrentUser(): Promise<User> {
-    const response: AxiosResponse<User> = await this.api.get('/users/usuarios/me');
+    const response: AxiosResponse<User> = await this.api.get('/users/me');
     return response.data;
   }
 
@@ -176,6 +183,36 @@ class ApiService {
   }
 
   // Métodos para dashboard
+  async getDashboardCompleto(): Promise<DashboardCompleto> {
+    const response: AxiosResponse<DashboardCompleto> = await this.api.get('/dashboard/completo');
+    return response.data;
+  }
+
+  async getEstadisticasVentas(): Promise<EstadisticasVentas> {
+    const response: AxiosResponse<EstadisticasVentas> = await this.api.get('/dashboard/ventas/estadisticas');
+    return response.data;
+  }
+
+  async getProductosMasVendidos(): Promise<any[]> {
+    const response: AxiosResponse<any[]> = await this.api.get('/dashboard/productos/mas-vendidos');
+    return response.data;
+  }
+
+  async getClientesTop(): Promise<any[]> {
+    const response: AxiosResponse<any[]> = await this.api.get('/dashboard/clientes/top');
+    return response.data;
+  }
+
+  async getStockBajo(): Promise<any[]> {
+    const response: AxiosResponse<any[]> = await this.api.get('/dashboard/stock/bajo');
+    return response.data;
+  }
+
+  async getTendencias(): Promise<any[]> {
+    const response: AxiosResponse<any[]> = await this.api.get('/dashboard/tendencias');
+    return response.data;
+  }
+
   async getDashboardEjecutivo(): Promise<DashboardData> {
     const response: AxiosResponse<DashboardData> = await this.api.get('/metricas-rendimiento/dashboard-ejecutivo');
     return response.data;
@@ -183,16 +220,46 @@ class ApiService {
 
   // Métodos para productos
   async getProductos(filtros?: FiltrosProductos): Promise<PaginatedResponse<Producto>> {
-    const response: AxiosResponse<Producto[]> = await this.api.get('/productos/', {
-      params: filtros,
-    });
-    
+    // Adaptar filtros del frontend a los esperados por el backend
+    const params: Record<string, any> = {};
+    if (filtros?.page != null) params.page = filtros.page;
+    if (filtros?.per_page != null) params.size = filtros.per_page; // backend espera 'size'
+    if (filtros?.search) params.search = filtros.search;
+    if (filtros?.sort_by) {
+      const dir = filtros.sort_order === 'desc' ? '-' : '';
+      params.sort = `${dir}${filtros.sort_by}`; // backend espera 'sort'
+    }
+    if (filtros?.categoria) params.categoria = filtros.categoria;
+    if (filtros?.activo != null) params.activo = filtros.activo;
+    if (filtros?.precio_min != null) params.precio_min = filtros.precio_min;
+    if (filtros?.precio_max != null) params.precio_max = filtros.precio_max;
+    if (filtros?.stock_min != null) params.stock_min = filtros.stock_min;
+
+    const response = await this.api.get('/productos/', { params });
+    const body = response.data as any;
+
+    // El backend puede devolver lista simple o paginado con { items, total, page, size }
+    if (Array.isArray(body)) {
+      const per = filtros?.per_page || body.length || 100;
+      return {
+        data: body,
+        total: body.length,
+        page: filtros?.page || 1,
+        per_page: per,
+        total_pages: Math.max(1, Math.ceil(body.length / per)),
+      };
+    }
+
+    const items = Array.isArray(body?.items) ? body.items : [];
+    const total = body?.total ?? items.length;
+    const page = body?.page ?? filtros?.page ?? 1;
+    const size = body?.size ?? (filtros?.per_page ?? (items.length || 100));
     return {
-      data: response.data,
-      total: response.data.length,
-      page: filtros?.page || 1,
-      per_page: filtros?.per_page || 100,
-      total_pages: Math.ceil(response.data.length / (filtros?.per_page || 100)),
+      data: items,
+      total,
+      page,
+      per_page: size,
+      total_pages: Math.max(1, Math.ceil(total / (size || 1))),
     };
   }
 
@@ -230,6 +297,11 @@ class ApiService {
     };
   }
 
+  async getClienteById(id: number): Promise<Cliente> {
+    const response = await this.api.get<Cliente>(`/clientes/${id}`);
+    return response.data;
+  }
+
   async getCliente(id: number): Promise<Cliente> {
     const response: AxiosResponse<Cliente> = await this.api.get(`/clientes/${id}`);
     return response.data;
@@ -264,6 +336,11 @@ class ApiService {
     };
   }
 
+  async getProveedorById(id: number): Promise<Proveedor> {
+    const response = await this.api.get<Proveedor>(`/proveedores/${id}`);
+    return response.data;
+  }
+
   async getProveedor(id: number): Promise<Proveedor> {
     const response: AxiosResponse<Proveedor> = await this.api.get(`/proveedores/${id}`);
     return response.data;
@@ -289,13 +366,21 @@ class ApiService {
       params: filtros,
     });
     
+    // El backend devuelve directamente un array de ventas
+    const ventas = Array.isArray(response.data) ? response.data : [];
+    
     return {
-      data: response.data,
-      total: response.data.length,
+      data: ventas,
+      total: ventas.length,
       page: filtros?.page || 1,
       per_page: filtros?.per_page || 100,
-      total_pages: Math.ceil(response.data.length / (filtros?.per_page || 100)),
+      total_pages: Math.ceil(ventas.length / (filtros?.per_page || 100)),
     };
+  }
+
+  async getVentaById(id: number): Promise<Venta> {
+    const response = await this.api.get<Venta>(`/ventas/${id}`);
+    return response.data;
   }
 
   async getVenta(id: number): Promise<Venta> {
@@ -323,13 +408,21 @@ class ApiService {
       params: filtros,
     });
     
+    // El backend devuelve directamente un array de compras
+    const compras = Array.isArray(response.data) ? response.data : [];
+    
     return {
-      data: response.data,
-      total: response.data.length,
+      data: compras,
+      total: compras.length,
       page: filtros?.page || 1,
       per_page: filtros?.per_page || 100,
-      total_pages: Math.ceil(response.data.length / (filtros?.per_page || 100)),
+      total_pages: Math.ceil(compras.length / (filtros?.per_page || 100)),
     };
+  }
+
+  async getCompraById(id: number): Promise<Compra> {
+    const response = await this.api.get<Compra>(`/compras/${id}`);
+    return response.data;
   }
 
   async getCompra(id: number): Promise<Compra> {
@@ -377,21 +470,36 @@ class ApiService {
   }
 
   // Métodos para dashboard
-  async getDashboard(): Promise<any> {
-    const response: AxiosResponse<any> = await this.api.get('/dashboard/');
+  async getDashboard(): Promise<DashboardData> {
+    // Compatibilidad: usar el endpoint vigente del backend
+    const response: AxiosResponse<DashboardData> = await this.api.get('/metricas-rendimiento/dashboard-ejecutivo');
     return response.data;
   }
 
   // Métodos para notificaciones
-  async getNotificaciones(filtros?: FiltrosBase): Promise<any[]> {
-    const response: AxiosResponse<any[]> = await this.api.get('/notificaciones/', {
+  async getNotificaciones(filtros?: FiltrosBase): Promise<Notificacion[]> {
+    const response: AxiosResponse<Notificacion[]> = await this.api.get('/notificaciones', {
       params: filtros,
     });
     return response.data;
   }
 
+  async getNotificacionesPendientes(): Promise<Notificacion[]> {
+    const response: AxiosResponse<Notificacion[]> = await this.api.get('/notificaciones/pendientes');
+    return response.data;
+  }
+
+  async getNotificacionesUrgentes(): Promise<Notificacion[]> {
+    const response: AxiosResponse<Notificacion[]> = await this.api.get('/notificaciones/urgentes');
+    return response.data;
+  }
+
   async marcarNotificacionComoLeida(id: number): Promise<void> {
-    await this.api.put(`/notificaciones/${id}`, { leida: true });
+    await this.api.patch(`/notificaciones/${id}/leer`);
+  }
+
+  async marcarTodasComoLeidas(): Promise<void> {
+    await this.api.patch('/notificaciones/bulk/leer');
   }
 
   // Métodos para exportación
@@ -408,11 +516,194 @@ class ApiService {
     const response: AxiosResponse<any> = await this.api.get('/metricas-rendimiento/tipos-disponibles');
     return response.data;
   }
+
+  // Métodos para inventario
+  async getResumenInventario(): Promise<ResumenInventario> {
+    const response: AxiosResponse<ResumenInventario> = await this.api.get('/inventario/resumen');
+    return response.data;
+  }
+
+  async getEstadisticasInventario(): Promise<EstadisticasInventario> {
+    const response: AxiosResponse<EstadisticasInventario> = await this.api.get('/inventario/estadisticas');
+    return response.data;
+  }
+
+  async getMovimientosStock(filtros?: FiltrosBase): Promise<MovimientoStock[]> {
+    const response: AxiosResponse<MovimientoStock[]> = await this.api.get('/inventario/movimientos', {
+      params: filtros,
+    });
+    return response.data;
+  }
+
+  async createMovimientoStock(movimiento: Partial<MovimientoStock>): Promise<MovimientoStock> {
+    const response: AxiosResponse<MovimientoStock> = await this.api.post('/inventario/movimientos', movimiento);
+    return response.data;
+  }
+
+  async getAlertasInventario(filtros?: FiltrosBase): Promise<AlertaInventario[]> {
+    const response: AxiosResponse<AlertaInventario[]> = await this.api.get('/inventario/alertas', {
+      params: filtros,
+    });
+    return response.data;
+  }
+
+  async getAlertasPendientes(): Promise<AlertaInventario[]> {
+    const response: AxiosResponse<AlertaInventario[]> = await this.api.get('/inventario/alertas/pendientes');
+    return response.data;
+  }
+
+  async getAlertasUrgentes(): Promise<AlertaInventario[]> {
+    const response: AxiosResponse<AlertaInventario[]> = await this.api.get('/inventario/alertas/urgentes');
+    return response.data;
+  }
+
+  async resolverAlerta(alertaId: number): Promise<void> {
+    await this.api.patch(`/inventario/alertas/${alertaId}/resolver`);
+  }
+
+  async getOrdenesReabastecimiento(filtros?: FiltrosBase): Promise<OrdenReabastecimiento[]> {
+    const response: AxiosResponse<OrdenReabastecimiento[]> = await this.api.get('/inventario/reordenes', {
+      params: filtros,
+    });
+    return response.data;
+  }
+
+  async createOrdenReabastecimiento(orden: Partial<OrdenReabastecimiento>): Promise<OrdenReabastecimiento> {
+    const response: AxiosResponse<OrdenReabastecimiento> = await this.api.post('/inventario/generar-reorden', orden);
+    return response.data;
+  }
+
+  async aprobarOrdenReabastecimiento(ordenId: number): Promise<void> {
+    await this.api.patch(`/inventario/reordenes/${ordenId}/aprobar`);
+  }
+
+  async rechazarOrdenReabastecimiento(ordenId: number): Promise<void> {
+    await this.api.patch(`/inventario/reordenes/${ordenId}/rechazar`);
+  }
+
+  async getConfiguracionesInventario(filtros?: FiltrosBase): Promise<ConfiguracionInventario[]> {
+    const response: AxiosResponse<ConfiguracionInventario[]> = await this.api.get('/inventario/configuraciones', {
+      params: filtros,
+    });
+    return response.data;
+  }
+
+  async createConfiguracionInventario(config: Partial<ConfiguracionInventario>): Promise<ConfiguracionInventario> {
+    const response: AxiosResponse<ConfiguracionInventario> = await this.api.post('/inventario/configuraciones', config);
+    return response.data;
+  }
+
+  async updateConfiguracionInventario(configId: number, config: Partial<ConfiguracionInventario>): Promise<ConfiguracionInventario> {
+    const response: AxiosResponse<ConfiguracionInventario> = await this.api.put(`/inventario/configuraciones/${configId}`, config);
+    return response.data;
+  }
+
+  async procesarAlertas(): Promise<void> {
+    await this.api.post('/inventario/procesar-alertas');
+  }
+
+  // ==================== GESTIÓN DE USUARIOS ====================
+  
+  async getUsers(): Promise<User[]> {
+    const response = await this.api.get<User[]>('/users/');
+    return response.data;
+  }
+
+  async getUserById(userId: number): Promise<User> {
+    const response = await this.api.get<User>(`/users/${userId}`);
+    return response.data;
+  }
+
+  async createUser(userData: UserCreate): Promise<User> {
+    const response = await this.api.post<User>('/users/', userData);
+    return response.data;
+  }
+
+  async updateUser(userId: number, userData: UserUpdate): Promise<User> {
+    const response = await this.api.put<User>(`/users/${userId}`, userData);
+    return response.data;
+  }
+
+  async deleteUser(userId: number): Promise<void> {
+    await this.api.delete(`/users/${userId}`);
+  }
+
+
+  // ==================== GESTIÓN DE PERMISOS ====================
+  
+  async getPermissions(): Promise<Permission[]> {
+    const response = await this.api.get<Permission[]>('/permisos/permissions');
+    return response.data;
+  }
+
+  async getPermissionsByModule(module: string): Promise<Permission[]> {
+    const response = await this.api.get<Permission[]>(`/permisos/permissions/module/${module}`);
+    return response.data;
+  }
+
+  async createPermission(permissionData: Omit<Permission, 'id' | 'created_at'>): Promise<Permission> {
+    const response = await this.api.post<Permission>('/permisos/permissions', permissionData);
+    return response.data;
+  }
+
+  async updatePermission(permissionId: number, permissionData: Partial<Permission>): Promise<Permission> {
+    const response = await this.api.put<Permission>(`/permisos/permissions/${permissionId}`, permissionData);
+    return response.data;
+  }
+
+  async deletePermission(permissionId: number): Promise<void> {
+    await this.api.delete(`/permisos/permissions/${permissionId}`);
+  }
+
+  // ==================== GESTIÓN DE ROLES ====================
+  
+  async getRoles(): Promise<Role[]> {
+    const response = await this.api.get<Role[]>('/permisos/roles');
+    return response.data;
+  }
+
+  async createRole(roleData: RoleCreate): Promise<Role> {
+    const response = await this.api.post<Role>('/permisos/roles', roleData);
+    return response.data;
+  }
+
+  async updateRole(roleId: number, roleData: RoleUpdate): Promise<Role> {
+    const response = await this.api.put<Role>(`/permisos/roles/${roleId}`, roleData);
+    return response.data;
+  }
+
+  async deleteRole(roleId: number): Promise<void> {
+    await this.api.delete(`/permisos/roles/${roleId}`);
+  }
+
+  // ==================== VERIFICACIÓN DE PERMISOS ====================
+  
+  async getUserPermissions(userId: number): Promise<UserPermissions> {
+    const response = await this.api.get<UserPermissions>(`/permisos/user/${userId}/permissions`);
+    return response.data;
+  }
+
+  async checkPermission(permissionName: string): Promise<{ permission: string; has_permission: boolean; user_role: string }> {
+    const response = await this.api.get(`/permisos/check/${permissionName}`);
+    return response.data;
+  }
+
+  async initializeDefaultPermissions(): Promise<{ message: string }> {
+    const response = await this.api.post('/permisos/initialize');
+    return response.data;
+  }
 }
 
 // Instancia singleton del servicio API
 export const apiService = new ApiService();
 export default apiService;
+
+
+
+
+
+
+
 
 
 

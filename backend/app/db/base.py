@@ -8,6 +8,8 @@ from app.models.venta_model import Venta
 from app.models.proveedor_model import Proveedor
 from app.models.compra_model import Compra, CompraItem, StockMovimiento
 from app.models.auditoria import AuditLog
+from app.models.notificacion_model import Notificacion
+from app.models.permiso_model import Role, Permission
 
 __all__ = [
     "Base",
@@ -20,4 +22,7 @@ __all__ = [
     "CompraItem",
     "StockMovimiento",
     "AuditLog",
+    "Notificacion",
+    "Role",
+    "Permission",
 ]

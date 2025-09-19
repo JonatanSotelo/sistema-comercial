@@ -4,15 +4,16 @@ from fastapi.security import OAuth2PasswordBearer
 from jose import jwt, JWTError
 from sqlalchemy.orm import Session
 from app.db.database import get_db
-from app.services.user_service import obtener_por_username
-import os
+from app.services.user_service import get_by_username
+from app.models.user_model import User
+from app.core.settings import settings
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
-SECRET_KEY = os.getenv("SECRET_KEY", "change-me")
-ALGORITHM = os.getenv("ALGORITHM", "HS256")
+SECRET_KEY = settings.SECRET_KEY
+ALGORITHM = settings.ALGORITHM
 
-def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> User:
     cred_exc = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="No autorizado",
@@ -26,7 +27,7 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     except JWTError:
         raise cred_exc
 
-    user = obtener_por_username(db, username)
+    user = get_by_username(db, username)
     if not user:
         raise cred_exc
     return user

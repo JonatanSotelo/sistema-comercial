@@ -3,7 +3,7 @@ from typing import Optional, List
 from sqlalchemy.orm import Session
 
 # Ajustá estos imports si tus módulos están en otras rutas:
-from app.models.user_model import Usuario
+from app.models.user_model import User
 from app.schemas.user_schema import UserCreate, UserUpdate
 
 # Intentamos usar tus funciones reales de seguridad; si no existen, hacemos fallback simple
@@ -27,7 +27,7 @@ except Exception:  # fallback básico
 PASSWORD_ATTRS = ("hashed_password", "password_hash", "password")
 
 
-def _get_stored_hash(u: Usuario) -> Optional[str]:
+def _get_stored_hash(u: User) -> Optional[str]:
     """Devuelve el hash almacenado en el primer atributo de password disponible."""
     for attr in PASSWORD_ATTRS:
         if hasattr(u, attr):
@@ -37,7 +37,7 @@ def _get_stored_hash(u: Usuario) -> Optional[str]:
     return None
 
 
-def _set_stored_hash(u: Usuario, hashed: str) -> None:
+def _set_stored_hash(u: User, hashed: str) -> None:
     """Setea el hash en el primer atributo disponible; si no hay ninguno, crea 'hashed_password'."""
     for attr in PASSWORD_ATTRS:
         if hasattr(u, attr):
@@ -49,39 +49,47 @@ def _set_stored_hash(u: Usuario, hashed: str) -> None:
 
 class UserService:
     @staticmethod
-    def get_by_username(db: Session, username: str) -> Optional[Usuario]:
-        return db.query(Usuario).filter(Usuario.username == username).first()
+    def get_by_username(db: Session, username: str) -> Optional[User]:
+        return db.query(User).filter(User.username == username).first()
 
     @staticmethod
-    def list_users(db: Session) -> List[Usuario]:
-        return db.query(Usuario).all()
+    def list_users(db: Session) -> List[User]:
+        return db.query(User).all()
 
     @staticmethod
-    def create_user(db: Session, data: UserCreate) -> Usuario:
-        u = Usuario(
+    def create_user(db: Session, data: UserCreate) -> User:
+        # Crea con los campos garantizados por el modelo actual
+        u = User(
             username=data.username,
-            email=getattr(data, "email", None),
-            is_admin=getattr(data, "is_admin", False),
-            is_active=getattr(data, "is_active", True),
         )
-        if hasattr(data, "password") and data.password:
+        # Hash de password
+        if getattr(data, "password", None):
             _set_stored_hash(u, hash_password(data.password))
+        # Rol: usar role directamente
+        if hasattr(u, "role") and getattr(data, "role", None) is not None:
+            setattr(u, "role", data.role)
+        # Campos opcionales que podrían no existir en el modelo actual
+        if hasattr(u, "email") and getattr(data, "email", None) is not None:
+            setattr(u, "email", data.email)
+        if hasattr(u, "is_active") and getattr(data, "is_active", None) is not None:
+            setattr(u, "is_active", data.is_active)
+
         db.add(u)
         db.commit()
         db.refresh(u)
         return u
 
     @staticmethod
-    def update_user(db: Session, user_id: int, data: UserUpdate) -> Optional[Usuario]:
-        u: Optional[Usuario] = db.query(Usuario).get(user_id)  # type: ignore
+    def update_user(db: Session, user_id: int, data: UserUpdate) -> Optional[User]:
+        u: Optional[User] = db.query(User).get(user_id)  # type: ignore
         if not u:
             return None
 
         # Campos opcionales
         if getattr(data, "email", None) is not None and hasattr(u, "email"):
             u.email = data.email
-        if getattr(data, "is_admin", None) is not None and hasattr(u, "is_admin"):
-            u.is_admin = data.is_admin
+        if getattr(data, "role", None) is not None and hasattr(u, "role"):
+            u.role = data.role  # type: ignore
         if getattr(data, "is_active", None) is not None and hasattr(u, "is_active"):
             u.is_active = data.is_active
         if getattr(data, "username", None):
@@ -96,7 +104,7 @@ class UserService:
 
     @staticmethod
     def delete_user(db: Session, user_id: int) -> bool:
-        u: Optional[Usuario] = db.query(Usuario).get(user_id)  # type: ignore
+        u: Optional[User] = db.query(User).get(user_id)  # type: ignore
         if not u:
             return False
         db.delete(u)
@@ -104,7 +112,7 @@ class UserService:
         return True
 
     @staticmethod
-    def authenticate(db: Session, username: str, password: str) -> Optional[Usuario]:
+    def authenticate(db: Session, username: str, password: str) -> Optional[User]:
         u = UserService.get_by_username(db, username)
         if not u:
             return None
@@ -131,20 +139,23 @@ class UserService:
 
 # ========= Wrappers de módulo para compatibilidad con tu user_router =========
 
-def list_users(db: Session) -> List[Usuario]:
+def list_users(db: Session) -> List[User]:
     return UserService.list_users(db)
 
-def get_by_username(db: Session, username: str) -> Optional[Usuario]:
+def get_by_username(db: Session, username: str) -> Optional[User]:
     return UserService.get_by_username(db, username)
 
-def create_user(db: Session, data: UserCreate) -> Usuario:
+def create_user(db: Session, data: UserCreate) -> User:
     return UserService.create_user(db, data)
 
-def update_user(db: Session, user_id: int, data: UserUpdate) -> Optional[Usuario]:
+def update_user(db: Session, user_id: int, data: UserUpdate) -> Optional[User]:
     return UserService.update_user(db, user_id, data)
 
 def delete_user(db: Session, user_id: int) -> bool:
     return UserService.delete_user(db, user_id)
 
-def authenticate(db: Session, username: str, password: str) -> Optional[Usuario]:
+def authenticate(db: Session, username: str, password: str) -> Optional[User]:
     return UserService.authenticate(db, username, password)
+
+def get_by_id(db: Session, user_id: int) -> Optional[User]:
+    return db.query(User).get(user_id)  # type: ignore

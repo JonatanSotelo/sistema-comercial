@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
-import { Notifications } from './Notifications';
+import { NotificationToasts } from './NotificationToasts';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -41,11 +41,18 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         </main>
       </div>
 
-      {/* Notificaciones */}
-      <Notifications />
+      {/* Notificaciones Toast */}
+      <NotificationToasts />
     </div>
   );
 };
+
+
+
+
+
+
+
 
 
 

@@ -13,6 +13,7 @@ class CompraCreate(BaseModel):
     proveedor_id: int
     items: List[CompraItemIn]
     fecha: Optional[datetime] = None  # opcional, por si querés setearla
+    observaciones: Optional[str] = None
 
 class CompraItemOut(BaseModel):
     id: int
@@ -27,6 +28,12 @@ class CompraOut(BaseModel):
     proveedor_id: int
     fecha: datetime
     total: float
+    descuento: float
+    impuestos: float
+    estado: str
+    observaciones: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
     items: List[CompraItemOut]
     model_config = ConfigDict(from_attributes=True)
 

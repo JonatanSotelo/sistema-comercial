@@ -1,5 +1,7 @@
 # app/services/compra_service.py
 from sqlalchemy.orm import Session
+from sqlalchemy import and_, or_
+from typing import List, Optional
 from app.models.compra_model import Compra, CompraItem, StockMovimiento
 from app.models.producto_model import Producto
 from app.models.proveedor_model import Proveedor
@@ -31,6 +33,8 @@ def crear_compra(db: Session, data: CompraCreate) -> Compra:
         compra = Compra(proveedor_id=data.proveedor_id)
         if data.fecha:
             compra.fecha = data.fecha
+        if data.observaciones:
+            compra.observaciones = data.observaciones
         db.add(compra)
         db.flush()  # obtener compra.id
 
@@ -69,3 +73,21 @@ def crear_compra(db: Session, data: CompraCreate) -> Compra:
 
 def obtener_compra(db: Session, compra_id: int):
     return db.query(Compra).filter(Compra.id == compra_id).first()
+
+def listar_compras(db: Session, page: int = 1, per_page: int = 20, search: Optional[str] = None) -> List[Compra]:
+    """Lista las compras con paginación y búsqueda"""
+    query = db.query(Compra)
+    
+    # Aplicar filtro de búsqueda si se proporciona
+    if search:
+        query = query.join(Proveedor).filter(
+            or_(
+                Compra.id.ilike(f"%{search}%"),
+                Proveedor.nombre.ilike(f"%{search}%"),
+                Compra.observaciones.ilike(f"%{search}%")
+            )
+        )
+    
+    # Aplicar paginación
+    offset = (page - 1) * per_page
+    return query.offset(offset).limit(per_page).all()

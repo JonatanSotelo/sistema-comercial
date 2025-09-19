@@ -1,195 +1,348 @@
-import React, { useState, useEffect } from 'react';
-import { X, Bell, AlertTriangle, Info, CheckCircle, AlertCircle } from 'lucide-react';
-import { useQuery } from 'react-query';
-import apiService from '@/services/api';
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  Bell,
+  X,
+  Check,
+  AlertTriangle,
+  Info,
+  CheckCircle,
+  AlertCircle,
+  Clock,
+  Trash2,
+  Settings,
+  Volume2,
+  VolumeX
+} from 'lucide-react';
+import { apiService } from '@/services/api';
+import { Notificacion } from '@/types';
 import { clsx } from 'clsx';
 
-interface Notification {
-  id: number;
-  tipo: string;
-  titulo: string;
-  mensaje: string;
-  prioridad: 'baja' | 'normal' | 'alta' | 'urgente';
-  leida: boolean;
-  fecha_creacion: string;
+interface NotificationsProps {
+  isOpen: boolean;
+  onClose: () => void;
 }
 
-export const Notifications: React.FC = () => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+export const Notifications: React.FC<NotificationsProps> = ({ isOpen, onClose }) => {
+  const [notificaciones, setNotificaciones] = useState<Notificacion[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [filter, setFilter] = useState<'all' | 'unread' | 'urgent'>('all');
+  const [showSettings, setShowSettings] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Obtener notificaciones
-  const { data: notificationsData, refetch } = useQuery(
-    'notifications',
-    () => apiService.getNotificaciones({ per_page: 10 }),
-    {
-      refetchInterval: 30000, // Refrescar cada 30 segundos
+  const loadNotificaciones = async () => {
+    try {
+      setLoading(true);
+      const data = await apiService.getNotificaciones({ per_page: 50 });
+      setNotificaciones(data);
+    } catch (error) {
+      console.error('Error cargando notificaciones:', error);
+    } finally {
+      setLoading(false);
     }
-  );
+  };
 
   useEffect(() => {
-    if (notificationsData) {
-      setNotifications(notificationsData);
+    if (isOpen) {
+      loadNotificaciones();
     }
-  }, [notificationsData]);
+  }, [isOpen]);
 
-  const unreadCount = notifications.filter(n => !n.leida).length;
+  // Actualizar notificaciones cada 30 segundos
+  useEffect(() => {
+    const interval = setInterval(loadNotificaciones, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
-  const getPriorityIcon = (prioridad: string) => {
-    switch (prioridad) {
-      case 'urgente':
-        return <AlertCircle className="h-4 w-4 text-error-500" />;
-      case 'alta':
-        return <AlertTriangle className="h-4 w-4 text-warning-500" />;
-      case 'normal':
-        return <Info className="h-4 w-4 text-primary-500" />;
-      case 'baja':
-        return <CheckCircle className="h-4 w-4 text-success-500" />;
-      default:
-        return <Info className="h-4 w-4 text-gray-500" />;
+  const playNotificationSound = () => {
+    if (soundEnabled && audioRef.current) {
+      audioRef.current.play().catch(console.error);
     }
   };
 
-  const getPriorityColor = (prioridad: string) => {
-    switch (prioridad) {
-      case 'urgente':
-        return 'border-l-error-500 bg-error-50';
-      case 'alta':
-        return 'border-l-warning-500 bg-warning-50';
-      case 'normal':
-        return 'border-l-primary-500 bg-primary-50';
-      case 'baja':
-        return 'border-l-success-500 bg-success-50';
-      default:
-        return 'border-l-gray-500 bg-gray-50';
-    }
-  };
-
-  const markAsRead = async (id: number) => {
+  const marcarComoLeida = async (id: number) => {
     try {
       await apiService.marcarNotificacionComoLeida(id);
-      setNotifications(prev => 
-        prev.map(n => n.id === id ? { ...n, leida: true } : n)
+      setNotificaciones(prev =>
+        prev.map(notif =>
+          notif.id === id ? { ...notif, estado: 'LEIDA', fecha_lectura: new Date().toISOString() } : notif
+        )
       );
     } catch (error) {
       console.error('Error marcando notificación como leída:', error);
     }
   };
 
-  const markAllAsRead = async () => {
+  const marcarTodasComoLeidas = async () => {
     try {
-      const unreadNotifications = notifications.filter(n => !n.leida);
-      await Promise.all(
-        unreadNotifications.map(n => apiService.marcarNotificacionComoLeida(n.id))
-      );
-      setNotifications(prev => 
-        prev.map(n => ({ ...n, leida: true }))
+      await apiService.marcarTodasComoLeidas();
+      setNotificaciones(prev =>
+        prev.map(notif => ({ ...notif, estado: 'LEIDA', fecha_lectura: new Date().toISOString() }))
       );
     } catch (error) {
-      console.error('Error marcando todas las notificaciones como leídas:', error);
+      console.error('Error marcando todas como leídas:', error);
     }
   };
 
+  const eliminarNotificacion = async (id: number) => {
+    try {
+      // Aquí deberías implementar el endpoint de eliminación si existe
+      setNotificaciones(prev => prev.filter(notif => notif.id !== id));
+    } catch (error) {
+      console.error('Error eliminando notificación:', error);
+    }
+  };
+
+  const getPriorityIcon = (esUrgente: boolean) => {
+    if (esUrgente) {
+      return <AlertCircle className="h-4 w-4 text-red-500" />;
+    }
+    return <Info className="h-4 w-4 text-blue-500" />;
+  };
+
+  const getPriorityColor = (esUrgente: boolean) => {
+    if (esUrgente) {
+      return 'border-l-red-500 bg-red-50';
+    }
+    return 'border-l-blue-500 bg-blue-50';
+  };
+
+  const filteredNotificaciones = notificaciones.filter(notif => {
+    if (filter === 'unread') return notif.estado !== 'LEIDA';
+    if (filter === 'urgent') return notif.es_urgente === true;
+    return true;
+  });
+
+  const unreadCount = notificaciones.filter(notif => notif.estado !== 'LEIDA').length;
+  const urgentCount = notificaciones.filter(notif => notif.es_urgente === true).length;
+
+  if (!isOpen) return null;
+
   return (
     <>
-      {/* Botón de notificaciones */}
-      <button
-        type="button"
-        className="relative rounded-full bg-white p-1 text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
-        onClick={() => setIsOpen(!isOpen)}
-      >
-        <span className="sr-only">Ver notificaciones</span>
-        <Bell className="h-6 w-6" />
-        {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-error-500 text-xs text-white">
-            {unreadCount}
-          </span>
-        )}
-      </button>
+      {/* Audio para notificaciones */}
+      <audio ref={audioRef} preload="auto">
+        <source src="/sounds/notification.mp3" type="audio/mpeg" />
+        <source src="/sounds/notification.wav" type="audio/wav" />
+      </audio>
+
+      {/* Overlay */}
+      <div
+        className="fixed inset-0 bg-black bg-opacity-50 z-40"
+        onClick={onClose}
+      />
 
       {/* Panel de notificaciones */}
-      {isOpen && (
-        <div className="absolute right-0 z-50 mt-2 w-80 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
-          <div className="p-4 border-b border-gray-200">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-medium text-gray-900">Notificaciones</h3>
-              {unreadCount > 0 && (
-                <button
-                  onClick={markAllAsRead}
-                  className="text-sm text-primary-600 hover:text-primary-500"
-                >
-                  Marcar todas como leídas
-                </button>
-              )}
-            </div>
-          </div>
-
-          <div className="max-h-96 overflow-y-auto">
-            {notifications.length === 0 ? (
-              <div className="p-4 text-center text-gray-500">
-                <Bell className="mx-auto h-8 w-8 text-gray-400" />
-                <p className="mt-2 text-sm">No hay notificaciones</p>
-              </div>
-            ) : (
-              <div className="divide-y divide-gray-200">
-                {notifications.map((notification) => (
-                  <div
-                    key={notification.id}
-                    className={clsx(
-                      'p-4 border-l-4 hover:bg-gray-50 cursor-pointer',
-                      getPriorityColor(notification.prioridad),
-                      !notification.leida && 'bg-blue-50'
-                    )}
-                    onClick={() => markAsRead(notification.id)}
-                  >
-                    <div className="flex items-start">
-                      <div className="flex-shrink-0">
-                        {getPriorityIcon(notification.prioridad)}
-                      </div>
-                      <div className="ml-3 flex-1">
-                        <div className="flex items-center justify-between">
-                          <p className="text-sm font-medium text-gray-900">
-                            {notification.titulo}
-                          </p>
-                          {!notification.leida && (
-                            <div className="h-2 w-2 rounded-full bg-primary-500" />
-                          )}
-                        </div>
-                        <p className="mt-1 text-sm text-gray-600">
-                          {notification.mensaje}
-                        </p>
-                        <p className="mt-1 text-xs text-gray-500">
-                          {new Date(notification.fecha_creacion).toLocaleString('es-ES')}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+      <div className="fixed right-4 top-16 w-96 bg-white rounded-lg shadow-xl border border-gray-200 z-50 max-h-[80vh] flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b border-gray-200">
+          <div className="flex items-center space-x-2">
+            <Bell className="h-5 w-5 text-gray-600" />
+            <h3 className="text-lg font-semibold text-gray-900">Notificaciones</h3>
+            {unreadCount > 0 && (
+              <span className="bg-red-500 text-white text-xs rounded-full px-2 py-1">
+                {unreadCount}
+              </span>
             )}
           </div>
-
-          <div className="p-4 border-t border-gray-200">
+          <div className="flex items-center space-x-2">
             <button
-              onClick={() => setIsOpen(false)}
-              className="w-full text-center text-sm text-primary-600 hover:text-primary-500"
+              onClick={() => setShowSettings(!showSettings)}
+              className="p-1 text-gray-400 hover:text-gray-600"
             >
-              Ver todas las notificaciones
+              <Settings className="h-4 w-4" />
+            </button>
+            <button
+              onClick={onClose}
+              className="p-1 text-gray-400 hover:text-gray-600"
+            >
+              <X className="h-4 w-4" />
             </button>
           </div>
         </div>
-      )}
 
-      {/* Overlay para cerrar al hacer clic fuera */}
-      {isOpen && (
-        <div
-          className="fixed inset-0 z-40"
-          onClick={() => setIsOpen(false)}
-        />
-      )}
+        {/* Configuración rápida */}
+        {showSettings && (
+          <div className="p-4 border-b border-gray-200 bg-gray-50">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-600">Sonido</span>
+              <button
+                onClick={() => setSoundEnabled(!soundEnabled)}
+                className="flex items-center space-x-2"
+              >
+                {soundEnabled ? (
+                  <Volume2 className="h-4 w-4 text-green-500" />
+                ) : (
+                  <VolumeX className="h-4 w-4 text-gray-400" />
+                )}
+                <span className="text-sm text-gray-600">
+                  {soundEnabled ? 'Activado' : 'Desactivado'}
+                </span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Filtros */}
+        <div className="p-4 border-b border-gray-200">
+          <div className="flex space-x-2">
+            <button
+              onClick={() => setFilter('all')}
+              className={clsx(
+                'px-3 py-1 text-xs rounded-full',
+                filter === 'all'
+                  ? 'bg-primary-100 text-primary-700'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              )}
+            >
+              Todas ({notificaciones.length})
+            </button>
+            <button
+              onClick={() => setFilter('unread')}
+              className={clsx(
+                'px-3 py-1 text-xs rounded-full',
+                filter === 'unread'
+                  ? 'bg-primary-100 text-primary-700'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              )}
+            >
+              No leídas ({unreadCount})
+            </button>
+            <button
+              onClick={() => setFilter('urgent')}
+              className={clsx(
+                'px-3 py-1 text-xs rounded-full',
+                filter === 'urgent'
+                  ? 'bg-primary-100 text-primary-700'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              )}
+            >
+              Urgentes ({urgentCount})
+            </button>
+          </div>
+        </div>
+
+        {/* Acciones */}
+        {unreadCount > 0 && (
+          <div className="p-4 border-b border-gray-200">
+            <button
+              onClick={marcarTodasComoLeidas}
+              className="flex items-center space-x-2 text-sm text-primary-600 hover:text-primary-700"
+            >
+              <Check className="h-4 w-4" />
+              <span>Marcar todas como leídas</span>
+            </button>
+          </div>
+        )}
+
+        {/* Lista de notificaciones */}
+        <div className="flex-1 overflow-y-auto">
+          {loading ? (
+            <div className="flex items-center justify-center p-8">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-600"></div>
+            </div>
+          ) : filteredNotificaciones.length === 0 ? (
+            <div className="flex flex-col items-center justify-center p-8 text-gray-500">
+              <Bell className="h-12 w-12 text-gray-300 mb-4" />
+              <p className="text-sm">No hay notificaciones</p>
+              <p className="text-xs text-gray-400">
+                {filter === 'unread' ? 'No hay notificaciones sin leer' :
+                 filter === 'urgent' ? 'No hay notificaciones urgentes' :
+                 'No hay notificaciones disponibles'}
+              </p>
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-200">
+              {filteredNotificaciones.map((notif) => (
+                <div
+                  key={notif.id}
+                  className={clsx(
+                    'p-4 border-l-4 transition-colors hover:bg-gray-50',
+                    getPriorityColor(notif.es_urgente || false),
+                    notif.estado !== 'LEIDA' && 'bg-blue-50'
+                  )}
+                >
+                  <div className="flex items-start space-x-3">
+                    <div className="flex-shrink-0 mt-1">
+                      {getPriorityIcon(notif.es_urgente || false)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <p className={clsx(
+                          'text-sm font-medium',
+                          notif.estado !== 'LEIDA' ? 'text-gray-900' : 'text-gray-600'
+                        )}>
+                          {notif.titulo}
+                        </p>
+                        <div className="flex items-center space-x-1">
+                          {notif.estado !== 'LEIDA' && (
+                            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                          )}
+                          <span className="text-xs text-gray-400">
+                            {new Date(notif.fecha_creacion).toLocaleTimeString('es-AR', {
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </span>
+                        </div>
+                      </div>
+                      <p className="text-sm text-gray-600 mt-1">
+                        {notif.mensaje}
+                      </p>
+                      {notif.accion_requerida && (
+                        <p className="text-xs text-orange-600 mt-1 font-medium">
+                          Acción requerida: {notif.accion_requerida}
+                        </p>
+                      )}
+                      <div className="flex items-center justify-between mt-2">
+                        <div className="flex items-center space-x-2">
+                          <span className={clsx(
+                            'inline-flex items-center px-2 py-1 rounded-full text-xs font-medium',
+                            notif.es_urgente ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'
+                          )}>
+                            {notif.es_urgente ? 'Urgente' : 'Normal'}
+                          </span>
+                          <span className="text-xs text-gray-400">
+                            {new Date(notif.fecha_creacion).toLocaleDateString('es-AR')}
+                          </span>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          {notif.estado !== 'LEIDA' && (
+                            <button
+                              onClick={() => marcarComoLeida(notif.id)}
+                              className="p-1 text-gray-400 hover:text-green-600"
+                              title="Marcar como leída"
+                            >
+                              <Check className="h-3 w-3" />
+                            </button>
+                          )}
+                          <button
+                            onClick={() => eliminarNotificacion(notif.id)}
+                            className="p-1 text-gray-400 hover:text-red-600"
+                            title="Eliminar"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="p-4 border-t border-gray-200 bg-gray-50">
+          <button
+            onClick={loadNotificaciones}
+            className="w-full text-sm text-primary-600 hover:text-primary-700"
+          >
+            Actualizar notificaciones
+          </button>
+        </div>
+      </div>
     </>
   );
 };
-
-
-

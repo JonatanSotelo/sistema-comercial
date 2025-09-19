@@ -51,6 +51,21 @@ def apply_sort(queryset, sort: Optional[str]):
     return queryset.order_by(*order_clauses)
 
 # --------- CRUD ----------
+@router.get("", response_model=List[ClienteOut])
+def list_clientes(
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=200),
+    search: Optional[str] = Query(None),
+    sort: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    _auth=Depends(require_user),
+):
+    page, size, offset = parse_pagination(page, per_page)
+    queryset = db.query(Cliente)
+    queryset = apply_search(queryset, search)
+    queryset = apply_sort(queryset, sort)
+    return queryset.offset(offset).limit(size).all()
+
 @router.post("", response_model=ClienteOut, status_code=201)
 def create_cliente(
     payload: ClienteCreate,
