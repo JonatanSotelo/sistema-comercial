@@ -91,3 +91,15 @@ def listar_compras(db: Session, page: int = 1, per_page: int = 20, search: Optio
     # Aplicar paginación
     offset = (page - 1) * per_page
     return query.offset(offset).limit(per_page).all()
+
+def eliminar_compra(db: Session, compra_id: int) -> bool:
+    """
+    Elimina una compra.
+    Nota: Los movimientos de stock asociados se eliminan en cascada.
+    """
+    compra = obtener_compra(db, compra_id)
+    if not compra:
+        return False
+    db.delete(compra)
+    db.commit()
+    return True

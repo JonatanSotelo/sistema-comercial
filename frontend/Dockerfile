@@ -5,7 +5,7 @@ COPY package*.json ./
 RUN npm install
 
 COPY . .
-ENV VITE_API_BASE=http://backend:8000 \
+ENV VITE_API_BASE=http://localhost:8000 \
     CHOKIDAR_USEPOLLING=true
 
 EXPOSE 3000

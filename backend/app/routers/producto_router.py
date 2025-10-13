@@ -200,6 +200,16 @@ def eliminar(prod_id: int, db: Session = Depends(get_db)):
     obj = db.get(Producto, prod_id)
     if not obj:
         raise HTTPException(status_code=404, detail="Producto no encontrado")
-    db.delete(obj)
-    db.commit()
+    try:
+        db.delete(obj)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        # Error de integridad referencial (foreign key constraint)
+        if "foreign key constraint" in str(e).lower() or "violates foreign key" in str(e).lower():
+            raise HTTPException(
+                status_code=400,
+                detail="No se puede eliminar el producto porque tiene ventas, compras o movimientos de stock asociados"
+            )
+        raise HTTPException(status_code=500, detail=f"Error al eliminar: {str(e)}")
     return None

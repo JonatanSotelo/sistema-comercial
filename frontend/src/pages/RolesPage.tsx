@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Role, RoleCreate, RoleUpdate, Permission } from '@/types';
-import { apiService } from '@/services/api';
+import { api } from '@/lib/api';
 
 const RolesPage: React.FC = () => {
   const [roles, setRoles] = useState<Role[]>([]);
@@ -30,8 +30,8 @@ const RolesPage: React.FC = () => {
     try {
       setLoading(true);
       const [rolesData, permissionsData] = await Promise.all([
-        apiService.getRoles(),
-        apiService.getPermissions()
+        api('/roles'),
+        api('/permissions')
       ]);
       
       setRoles(rolesData);
@@ -47,7 +47,10 @@ const RolesPage: React.FC = () => {
   const handleCreateRole = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await apiService.createRole(formData);
+      await api('/roles', {
+        method: 'POST',
+        body: JSON.stringify(formData)
+      });
       setShowCreateModal(false);
       setFormData({
         name: '',
@@ -66,7 +69,10 @@ const RolesPage: React.FC = () => {
     if (!selectedRole) return;
     
     try {
-      await apiService.updateRole(selectedRole.id, editFormData);
+      await api(`/roles/${selectedRole.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(editFormData)
+      });
       setShowEditModal(false);
       setSelectedRole(null);
       setEditFormData({});
@@ -81,7 +87,7 @@ const RolesPage: React.FC = () => {
     if (!confirm('¿Estás seguro de que quieres eliminar este rol?')) return;
     
     try {
-      await apiService.deleteRole(roleId);
+      await api(`/roles/${roleId}`, { method: 'DELETE' });
       loadData();
     } catch (err) {
       setError('Error al eliminar el rol');
@@ -398,4 +404,7 @@ const RolesPage: React.FC = () => {
 };
 
 export default RolesPage;
+
+
+
 

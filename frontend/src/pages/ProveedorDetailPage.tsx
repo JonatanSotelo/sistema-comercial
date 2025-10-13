@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Edit, Trash2, Phone, Mail, MapPin, Calendar, Building } from 'lucide-react';
 import { Proveedor } from '@/types';
-import { apiService } from '@/services/api';
+import { api } from '@/lib/api';
 
 export const ProveedorDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -21,7 +21,7 @@ export const ProveedorDetailPage: React.FC = () => {
   const loadProveedor = async (proveedorId: number) => {
     try {
       setLoading(true);
-      const proveedorData = await apiService.getProveedorById(proveedorId);
+      const proveedorData = await api(`/proveedores/${proveedorId}`);
       setProveedor(proveedorData);
     } catch (err) {
       setError('Error al cargar el proveedor');
@@ -35,7 +35,7 @@ export const ProveedorDetailPage: React.FC = () => {
     if (!proveedor) return;
     
     try {
-      await apiService.deleteProveedor(proveedor.id);
+      await api(`/proveedores/${proveedor.id}`, { method: 'DELETE' });
       navigate('/proveedores');
     } catch (err) {
       setError('Error al eliminar el proveedor');
@@ -240,4 +240,7 @@ export const ProveedorDetailPage: React.FC = () => {
     </div>
   );
 };
+
+
+
 

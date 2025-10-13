@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save, X } from 'lucide-react';
 import { Proveedor, ProveedorUpdate } from '@/types';
-import { apiService } from '@/services/api';
+import { api } from '@/lib/api';
 
 export const ProveedorEditPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -31,7 +31,7 @@ export const ProveedorEditPage: React.FC = () => {
   const loadProveedor = async (proveedorId: number) => {
     try {
       setLoading(true);
-      const proveedorData = await apiService.getProveedorById(proveedorId);
+      const proveedorData = await api(`/proveedores/${proveedorId}`);
       setProveedor(proveedorData);
       setFormData({
         nombre: proveedorData.nombre,
@@ -56,7 +56,10 @@ export const ProveedorEditPage: React.FC = () => {
 
     try {
       setSaving(true);
-      await apiService.updateProveedor(proveedor.id, formData);
+      await api(`/proveedores/${proveedor.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(formData)
+      });
       navigate(`/proveedores/${proveedor.id}`);
     } catch (err) {
       setError('Error al actualizar el proveedor');
@@ -264,4 +267,7 @@ export const ProveedorEditPage: React.FC = () => {
     </div>
   );
 };
+
+
+
 

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { apiService } from '@/services/api';
+import { api } from '@/lib/api';
 import { Notificacion } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -19,7 +19,7 @@ export const useNotifications = () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await apiService.getNotificaciones({ per_page: 100 });
+      const data = await api('/notificaciones?per_page=100');
       setNotificaciones(data);
       setLastUpdate(new Date());
     } catch (err) {
@@ -32,7 +32,7 @@ export const useNotifications = () => {
 
   const marcarComoLeida = useCallback(async (id: number) => {
     try {
-      await apiService.marcarNotificacionComoLeida(id);
+      await api(`/notificaciones/${id}/leer`, { method: 'PATCH' });
       setNotificaciones(prev =>
         prev.map(notif =>
           notif.id === id
@@ -47,7 +47,7 @@ export const useNotifications = () => {
 
   const marcarTodasComoLeidas = useCallback(async () => {
     try {
-      await apiService.marcarTodasComoLeidas();
+      await api('/notificaciones/marcar-todas-leidas', { method: 'PATCH' });
       setNotificaciones(prev =>
         prev.map(notif => ({
           ...notif,

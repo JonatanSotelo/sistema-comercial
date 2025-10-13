@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save, X } from 'lucide-react';
 import { ProveedorCreate } from '@/types';
-import { apiService } from '@/services/api';
+import { api } from '@/lib/api';
 
 export const NuevoProveedorPage: React.FC = () => {
   const navigate = useNavigate();
@@ -24,8 +24,11 @@ export const NuevoProveedorPage: React.FC = () => {
     
     try {
       setSaving(true);
-      const newProveedor = await apiService.createProveedor(formData);
-      navigate(`/proveedores/${newProveedor.id}`);
+      const newProveedor = await api('/proveedores', {
+        method: 'POST',
+        body: JSON.stringify(formData)
+      });
+      navigate('/proveedores');
     } catch (err) {
       setError('Error al crear el proveedor');
       console.error('Error creating proveedor:', err);

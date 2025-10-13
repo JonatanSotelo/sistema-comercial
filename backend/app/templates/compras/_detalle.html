@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block title %}Detalle Compra #{{ compra.id }} - Sistema Comercial{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-3xl font-bold text-gray-800">Compra #{{ compra.id }}</h1>
+        <a href="/app/compras" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded">
+            ← Volver
+        </a>
+    </div>
+    
+    <!-- Información de la compra -->
+    <div class="bg-white rounded-lg shadow p-6 mb-6">
+        <div class="grid grid-cols-2 gap-4">
+            <div>
+                <label class="text-sm font-medium text-gray-500">Fecha:</label>
+                <p class="text-gray-900">{{ compra.fecha[:19] if compra.fecha else '-' }}</p>
+            </div>
+            <div>
+                <label class="text-sm font-medium text-gray-500">Estado:</label>
+                <p>
+                    <span class="px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full 
+                        {% if compra.estado == 'completada' %}bg-green-100 text-green-800
+                        {% elif compra.estado == 'pendiente' %}bg-yellow-100 text-yellow-800
+                        {% else %}bg-gray-100 text-gray-800{% endif %}">
+                        {{ compra.estado|capitalize }}
+                    </span>
+                </p>
+            </div>
+            <div>
+                <label class="text-sm font-medium text-gray-500">Proveedor:</label>
+                <p class="text-gray-900">{{ compra.proveedor_id if compra.proveedor_id else 'No especificado' }}</p>
+            </div>
+            <div>
+                <label class="text-sm font-medium text-gray-500">Total:</label>
+                <p class="text-2xl font-bold text-blue-600">${{ "%.2f"|format(compra.total|default(0)) }}</p>
+            </div>
+            {% if compra.observaciones %}
+            <div class="col-span-2">
+                <label class="text-sm font-medium text-gray-500">Observaciones:</label>
+                <p class="text-gray-900">{{ compra.observaciones }}</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Items de la compra -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <div class="px-6 py-4 bg-gray-50 border-b">
+            <h3 class="text-lg font-semibold text-gray-900">Productos</h3>
+        </div>
+        <table class="min-w-full">
+            <thead class="bg-gray-100">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Producto ID</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Cantidad</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Precio Unit.</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Subtotal</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for item in compra.items %}
+                <tr>
+                    <td class="px-6 py-4 text-sm text-gray-900">Producto #{{ item.producto_id }}</td>
+                    <td class="px-6 py-4 text-sm text-gray-900 text-right">{{ item.cantidad }}</td>
+                    <td class="px-6 py-4 text-sm text-gray-900 text-right">${{ "%.2f"|format(item.precio_unitario) }}</td>
+                    <td class="px-6 py-4 text-sm font-semibold text-gray-900 text-right">${{ "%.2f"|format(item.subtotal) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot class="bg-gray-50 font-bold">
+                <tr>
+                    <td colspan="3" class="px-6 py-4 text-right text-gray-900">TOTAL:</td>
+                    <td class="px-6 py-4 text-right text-xl text-blue-600">${{ "%.2f"|format(compra.total) }}</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+    
+    <!-- Información adicional -->
+    <div class="bg-white rounded-lg shadow p-6 mt-6">
+        <h3 class="text-lg font-semibold mb-4">Información Adicional</h3>
+        <div class="grid grid-cols-2 gap-4 text-sm">
+            <div>
+                <label class="text-gray-500">Descuento:</label>
+                <p class="text-gray-900">${{ "%.2f"|format(compra.descuento|default(0)) }}</p>
+            </div>
+            <div>
+                <label class="text-gray-500">Impuestos:</label>
+                <p class="text-gray-900">${{ "%.2f"|format(compra.impuestos|default(0)) }}</p>
+            </div>
+            <div>
+                <label class="text-gray-500">Creado:</label>
+                <p class="text-gray-900">{{ compra.created_at[:19] if compra.created_at else '-' }}</p>
+            </div>
+            <div>
+                <label class="text-gray-500">Actualizado:</label>
+                <p class="text-gray-900">{{ compra.updated_at[:19] if compra.updated_at else '-' }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+

@@ -13,7 +13,7 @@ import {
   Volume2,
   VolumeX
 } from 'lucide-react';
-import { apiService } from '@/services/api';
+import { api } from '@/lib/api';
 import { Notificacion } from '@/types';
 import { clsx } from 'clsx';
 
@@ -33,7 +33,7 @@ export const Notifications: React.FC<NotificationsProps> = ({ isOpen, onClose })
   const loadNotificaciones = async () => {
     try {
       setLoading(true);
-      const data = await apiService.getNotificaciones({ per_page: 50 });
+      const data = await api('/notificaciones?per_page=50');
       setNotificaciones(data);
     } catch (error) {
       console.error('Error cargando notificaciones:', error);
@@ -62,7 +62,7 @@ export const Notifications: React.FC<NotificationsProps> = ({ isOpen, onClose })
 
   const marcarComoLeida = async (id: number) => {
     try {
-      await apiService.marcarNotificacionComoLeida(id);
+      await api(`/notificaciones/${id}/leer`, { method: 'PATCH' });
       setNotificaciones(prev =>
         prev.map(notif =>
           notif.id === id ? { ...notif, estado: 'LEIDA', fecha_lectura: new Date().toISOString() } : notif
@@ -75,7 +75,7 @@ export const Notifications: React.FC<NotificationsProps> = ({ isOpen, onClose })
 
   const marcarTodasComoLeidas = async () => {
     try {
-      await apiService.marcarTodasComoLeidas();
+      await api('/notificaciones/marcar-todas-leidas', { method: 'PATCH' });
       setNotificaciones(prev =>
         prev.map(notif => ({ ...notif, estado: 'LEIDA', fecha_lectura: new Date().toISOString() }))
       );

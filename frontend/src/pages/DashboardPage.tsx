@@ -28,7 +28,7 @@ import {
   Area,
   AreaChart
 } from 'recharts';
-import { apiService } from '@/services/api';
+import { api } from '@/lib/api';
 import { useNotificationContext } from '@/contexts/NotificationContext';
 import { DashboardCompleto, EstadisticasVentas, Notificacion } from '@/types';
 
@@ -47,9 +47,9 @@ const DashboardPage: React.FC = () => {
       setError(null);
       
       const [dashboard, ventas, notifs] = await Promise.all([
-        apiService.getDashboardCompleto(),
-        apiService.getEstadisticasVentas(),
-        apiService.getNotificaciones({ per_page: 10 })
+        api('/dashboard/completo'),
+        api('/dashboard/ventas/estadisticas'),
+        api('/notificaciones/?per_page=10')
       ]);
       
       setDashboardData(dashboard);

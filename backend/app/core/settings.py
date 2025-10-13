@@ -27,8 +27,8 @@ class Settings(BaseSettings):
     SMTP_USERNAME: str | None = None
     SMTP_PASSWORD: str | None = None
     
-    # Redis (futuro)
-    REDIS_URL: str | None = None
+    # Redis
+    REDIS_URL: str = "redis://redis:6379"
     
     # Logging
     LOG_LEVEL: str = "INFO"

@@ -1,31 +1,28 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from 'react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { NotificationProvider } from '@/contexts/NotificationContext';
 import { Layout } from '@/components/Layout';
 import { LoginPage } from '@/pages/LoginPage';
 import { RegisterPage } from '@/pages/RegisterPage';
 import DashboardPage from '@/pages/DashboardPage';
-import { ProductosPage } from '@/pages/ProductosPage';
-import { NuevoProductoPage } from '@/pages/NuevoProductoPage';
-import { ClientesPage } from '@/pages/ClientesPage';
-import { NuevoClientePage } from '@/pages/NuevoClientePage';
-import { ClienteDetailPage } from '@/pages/ClienteDetailPage';
-import { ClienteEditPage } from '@/pages/ClienteEditPage';
-import { ProveedoresPage } from '@/pages/ProveedoresPage';
-import { NuevoProveedorPage } from '@/pages/NuevoProveedorPage';
-import { ProveedorDetailPage } from '@/pages/ProveedorDetailPage';
-import { ProveedorEditPage } from '@/pages/ProveedorEditPage';
-import { VentasPage } from '@/pages/VentasPage';
-import { NuevaVentaPage } from '@/pages/NuevaVentaPage';
-import { ComprasPage } from '@/pages/ComprasPage';
-import { NuevaCompraPage } from '@/pages/NuevaCompraPage';
+import ProductosPage from '@/pages/ProductosPage';
+import ClientesPage from '@/pages/ClientesPage';
+import ClienteForm from '@/pages/ClienteForm';
+import ProveedoresPage from '@/pages/ProveedoresPage';
+import ProveedorForm from '@/pages/ProveedorForm';
+import VentasPage from '@/pages/VentasPage';
+import ComprasPage from '@/pages/ComprasPage';
+import VentaForm from '@/pages/VentaForm';
+import CompraForm from '@/pages/CompraForm';
+import ProductoForm from '@/pages/ProductoForm';
 import InventarioPage from '@/pages/InventarioPage';
 import { MetricasPage } from '@/pages/MetricasPage';
 import { ReportesPage } from '@/pages/ReportesPage';
 import { ConfiguracionPage } from '@/pages/ConfiguracionPage';
 import UsuariosPage from '@/pages/UsuariosPage';
+import UsuarioForm from '@/pages/UsuarioForm';
 import RolesPage from '@/pages/RolesPage';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import '@/styles/globals.css';
@@ -59,7 +56,7 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <Layout>
-                      <DashboardPage />
+                      <Navigate to="/productos" replace />
                     </Layout>
                   </ProtectedRoute>
                 }
@@ -87,11 +84,31 @@ function App() {
                 }
               />
               <Route
-                path="/productos/nuevo"
+                path="/productos/new"
                 element={
                   <ProtectedRoute>
                     <Layout>
-                      <NuevoProductoPage />
+                      <ProductoForm mode="create" />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/productos/:id"
+                element={
+                  <ProtectedRoute>
+                    <Layout>
+                      <ProductoForm mode="view" />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/productos/:id/edit"
+                element={
+                  <ProtectedRoute>
+                    <Layout>
+                      <ProductoForm mode="edit" />
                     </Layout>
                   </ProtectedRoute>
                 }
@@ -112,7 +129,7 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <Layout>
-                      <NuevoClientePage />
+                      <ClienteForm />
                     </Layout>
                   </ProtectedRoute>
                 }
@@ -122,7 +139,7 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <Layout>
-                      <ClienteDetailPage />
+                      <ClienteForm mode="view" />
                     </Layout>
                   </ProtectedRoute>
                 }
@@ -132,7 +149,7 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <Layout>
-                      <ClienteEditPage />
+                      <ClienteForm mode="edit" />
                     </Layout>
                   </ProtectedRoute>
                 }
@@ -153,7 +170,7 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <Layout>
-                      <NuevoProveedorPage />
+                      <ProveedorForm />
                     </Layout>
                   </ProtectedRoute>
                 }
@@ -163,7 +180,7 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <Layout>
-                      <ProveedorDetailPage />
+                      <ProveedorForm mode="view" />
                     </Layout>
                   </ProtectedRoute>
                 }
@@ -173,7 +190,7 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <Layout>
-                      <ProveedorEditPage />
+                      <ProveedorForm mode="edit" />
                     </Layout>
                   </ProtectedRoute>
                 }
@@ -191,11 +208,31 @@ function App() {
               />
               
               <Route
-                path="/ventas/nueva"
+                path="/ventas/new"
                 element={
                   <ProtectedRoute>
                     <Layout>
-                      <NuevaVentaPage />
+                      <VentaForm mode="create" />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/ventas/:id"
+                element={
+                  <ProtectedRoute>
+                    <Layout>
+                      <VentaForm mode="view" />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/ventas/:id/edit"
+                element={
+                  <ProtectedRoute>
+                    <Layout>
+                      <VentaForm mode="edit" />
                     </Layout>
                   </ProtectedRoute>
                 }
@@ -212,11 +249,31 @@ function App() {
                 }
               />
               <Route
-                path="/compras/nueva"
+                path="/compras/new"
                 element={
                   <ProtectedRoute>
                     <Layout>
-                      <NuevaCompraPage />
+                      <CompraForm mode="create" />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/compras/:id"
+                element={
+                  <ProtectedRoute>
+                    <Layout>
+                      <CompraForm mode="view" />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/compras/:id/edit"
+                element={
+                  <ProtectedRoute>
+                    <Layout>
+                      <CompraForm mode="edit" />
                     </Layout>
                   </ProtectedRoute>
                 }
@@ -276,6 +333,36 @@ function App() {
                   </ProtectedRoute>
                 }
               />
+              <Route
+                path="/usuarios/nuevo"
+                element={
+                  <ProtectedRoute>
+                    <Layout>
+                      <UsuarioForm mode="create" />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/usuarios/:id"
+                element={
+                  <ProtectedRoute>
+                    <Layout>
+                      <UsuarioForm mode="view" />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/usuarios/:id/editar"
+                element={
+                  <ProtectedRoute>
+                    <Layout>
+                      <UsuarioForm mode="edit" />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
               
               <Route
                 path="/roles"
@@ -289,7 +376,7 @@ function App() {
               />
               
               {/* Ruta por defecto */}
-              <Route path="*" element={<Navigate to="/dashboard" replace />} />
+              <Route path="*" element={<Navigate to="/productos" replace />} />
             </Routes>
             </div>
           </Router>

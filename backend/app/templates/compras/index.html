@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}Compras - Sistema Comercial{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-3xl font-bold text-gray-800">Compras</h1>
+        <div class="flex gap-2">
+            <button 
+                hx-get="/app/compras/form"
+                hx-target="#modal-container"
+                class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
+            >
+                + Nueva Compra
+            </button>
+        </div>
+    </div>
+    
+    <!-- Buscador -->
+    <div class="bg-white p-4 rounded-lg shadow mb-4">
+        <div class="flex gap-4">
+            <input 
+                type="text" 
+                id="search-input"
+                placeholder="Buscar compras..."
+                class="flex-1 border rounded px-4 py-2"
+            >
+            <button 
+                id="search-btn"
+                class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded"
+            >
+                Buscar
+            </button>
+            <button 
+                id="clear-btn"
+                class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded"
+            >
+                Limpiar
+            </button>
+        </div>
+    </div>
+    
+    <!-- Tabla -->
+    <div 
+        id="table-container" 
+        hx-get="/app/compras/table?page=1&per_page=20"
+        hx-trigger="load, refreshTable from:body"
+        hx-swap="innerHTML"
+    >
+        <div class="text-center py-8">Cargando...</div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('search-btn').addEventListener('click', function() {
+        const search = document.getElementById('search-input').value;
+        htmx.ajax('GET', `/app/compras/table?page=1&per_page=20&search=${encodeURIComponent(search)}`, {
+            target: '#table-container',
+            swap: 'innerHTML'
+        });
+    });
+    
+    document.getElementById('clear-btn').addEventListener('click', function() {
+        document.getElementById('search-input').value = '';
+        htmx.ajax('GET', '/app/compras/table?page=1&per_page=20', {
+            target: '#table-container',
+            swap: 'innerHTML'
+        });
+    });
+    
+    document.getElementById('search-input').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            document.getElementById('search-btn').click();
+        }
+    });
+</script>
+{% endblock %}

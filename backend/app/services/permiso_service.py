@@ -219,3 +219,6 @@ class PermissionService:
 # Instancia global del servicio
 permiso_service = PermissionService()
 
+
+
+

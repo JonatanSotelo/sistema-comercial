@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import apiService from '@/services/api';
+import { api } from '@/lib/api';
 
 interface User {
   id: string;
@@ -40,7 +40,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const token = localStorage.getItem('access_token');
       if (token) {
         try {
-          const me: any = await apiService.getCurrentUser();
+          const me: any = await api('/auth/me');
           setUser({
             id: String(me?.id ?? ''),
             username: me?.username ?? '',
@@ -57,8 +57,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   const login = async (username: string, password: string) => {
-    await apiService.login(username, password);
-    const me: any = await apiService.getCurrentUser();
+    const response = await api('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ username, password })
+    });
+    localStorage.setItem('access_token', response.access_token);
+    const me: any = await api('/auth/me');
     setUser({
       id: String(me?.id ?? ''),
       username: me?.username ?? '',
@@ -69,7 +73,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const register = async (data: { username: string; email: string; password: string }) => {
     // Si el backend no tiene /auth/register, esto fallará y el caller mostrará el error.
-    await apiService.register(data as any);
+    await api('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
   };
 
   const logout = () => {

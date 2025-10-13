@@ -1,0 +1,231 @@
+<!-- Modal para formulario de venta con items -->
+<div 
+    id="venta-modal" 
+    class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50"
+    x-data="{
+        open: true,
+        items: [],
+        selectedProducto: '',
+        cantidad: 1,
+        total: 0,
+        
+        getStockDisponible() {
+            if (!this.selectedProducto) return 0;
+            const prod = productos.find(p => p.id == this.selectedProducto);
+            return prod ? (prod.stock || 0) : 0;
+        },
+        
+        addItem() {
+            if (!this.selectedProducto) return;
+            
+            const prod = productos.find(p => p.id == this.selectedProducto);
+            if (!prod) return;
+            
+            const cantidad = parseFloat(this.cantidad);
+            const stockDisponible = parseFloat(prod.stock || 0);
+            
+            // Validar stock disponible
+            if (cantidad > stockDisponible) {
+                alert(`Stock insuficiente. Disponible: ${stockDisponible}, Solicitado: ${cantidad}`);
+                return;
+            }
+            
+            if (cantidad <= 0) {
+                alert('La cantidad debe ser mayor a 0');
+                return;
+            }
+            
+            this.items.push({
+                producto_id: prod.id,
+                nombre: prod.nombre,
+                cantidad: cantidad,
+                precio_unitario: parseFloat(prod.precio)
+            });
+            
+            this.calculateTotal();
+            this.selectedProducto = '';
+            this.cantidad = 1;
+        },
+        
+        removeItem(index) {
+            this.items.splice(index, 1);
+            this.calculateTotal();
+        },
+        
+        calculateTotal() {
+            this.total = this.items.reduce((sum, item) => {
+                return sum + (item.cantidad * item.precio_unitario);
+            }, 0);
+        },
+        
+        submitForm() {
+            if (this.items.length === 0) {
+                alert('Debe agregar al menos un producto');
+                return false;
+            }
+            
+            const itemsJson = JSON.stringify(this.items.map(i => ({
+                producto_id: i.producto_id,
+                cantidad: i.cantidad,
+                precio_unitario: i.precio_unitario
+            })));
+            
+            document.getElementById('items-json-field').value = itemsJson;
+            return true;
+        }
+    }"
+    @click.self="open = false; document.getElementById('modal-container').innerHTML = ''"
+>
+    <div class="relative top-10 mx-auto p-5 border w-full max-w-4xl shadow-lg rounded-md bg-white">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-semibold text-gray-900">Nueva Venta</h3>
+            <button 
+                @click="open = false; document.getElementById('modal-container').innerHTML = ''"
+                class="text-gray-400 hover:text-gray-500"
+            >
+                <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+        
+        <form 
+            hx-post="/app/ventas/save" 
+            hx-target="#modal-container"
+            hx-swap="innerHTML"
+            @submit="submitForm()"
+        >
+            <!-- Cliente (opcional) -->
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Cliente (opcional)</label>
+                <select 
+                    name="cliente_id" 
+                    class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                    <option value="">-- Consumidor Final --</option>
+                    {% for cliente in clientes %}
+                    <option value="{{ cliente.id }}">{{ cliente.nombre }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <!-- Agregar Items -->
+            <div class="mb-4 p-4 bg-gray-50 rounded">
+                <h4 class="font-semibold mb-3">Productos</h4>
+                
+                <!-- Mostrar stock del producto seleccionado -->
+                <div x-show="selectedProducto" class="mb-2 p-2 bg-blue-50 rounded text-sm">
+                    <span class="font-semibold">Stock disponible:</span>
+                    <span class="text-blue-600" x-text="getStockDisponible()"></span> unidades
+                </div>
+                
+                <div class="grid grid-cols-12 gap-2 mb-3">
+                    <select 
+                        x-model="selectedProducto"
+                        class="col-span-6 border border-gray-300 rounded px-3 py-2"
+                    >
+                        <option value="">Seleccionar producto...</option>
+                        {% for prod in productos %}
+                        <option value="{{ prod.id }}">
+                            {{ prod.nombre }} - ${{ "%.2f"|format(prod.precio) }} (Stock: {{ prod.stock|default(0) }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <input 
+                        type="number" 
+                        x-model="cantidad"
+                        min="0.01"
+                        step="0.01"
+                        placeholder="Cantidad"
+                        class="col-span-3 border border-gray-300 rounded px-3 py-2"
+                    >
+                    <button 
+                        type="button"
+                        @click="addItem()"
+                        class="col-span-3 bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded"
+                    >
+                        + Agregar
+                    </button>
+                </div>
+                
+                <!-- Lista de items agregados -->
+                <div x-show="items.length > 0" class="mt-4">
+                    <table class="w-full text-sm">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="px-2 py-2 text-left">Producto</th>
+                                <th class="px-2 py-2 text-right">Cantidad</th>
+                                <th class="px-2 py-2 text-right">Precio Unit.</th>
+                                <th class="px-2 py-2 text-right">Subtotal</th>
+                                <th class="px-2 py-2"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template x-for="(item, index) in items" :key="index">
+                                <tr class="border-t">
+                                    <td class="px-2 py-2" x-text="item.nombre"></td>
+                                    <td class="px-2 py-2 text-right" x-text="item.cantidad"></td>
+                                    <td class="px-2 py-2 text-right">$<span x-text="item.precio_unitario.toFixed(2)"></span></td>
+                                    <td class="px-2 py-2 text-right font-semibold">$<span x-text="(item.cantidad * item.precio_unitario).toFixed(2)"></span></td>
+                                    <td class="px-2 py-2">
+                                        <button 
+                                            type="button"
+                                            @click="removeItem(index)"
+                                            class="text-red-600 hover:text-red-900"
+                                        >
+                                            ✕
+                                        </button>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                        <tfoot class="bg-gray-100 font-bold">
+                            <tr>
+                                <td colspan="3" class="px-2 py-2 text-right">TOTAL:</td>
+                                <td class="px-2 py-2 text-right">$<span x-text="total.toFixed(2)"></span></td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Observaciones -->
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Observaciones</label>
+                <textarea 
+                    name="observaciones" 
+                    rows="2"
+                    class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                ></textarea>
+            </div>
+            
+            <!-- Campo oculto con items JSON -->
+            <input type="hidden" name="items_json" id="items-json-field">
+            
+            <!-- Botones -->
+            <div class="mt-6 flex justify-end gap-2">
+                <button 
+                    type="button"
+                    @click="open = false; document.getElementById('modal-container').innerHTML = ''"
+                    class="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
+                >
+                    Cancelar
+                </button>
+                <button 
+                    type="submit"
+                    class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                >
+                    Guardar Venta
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Datos de productos para Alpine
+    const productos = {{ productos|tojson|safe }};
+</script>
+
+

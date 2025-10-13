@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save, X } from 'lucide-react';
 import { ClienteCreate } from '@/types';
-import { apiService } from '@/services/api';
+import { api } from '@/lib/api';
 
 export const NuevoClientePage: React.FC = () => {
   const navigate = useNavigate();
@@ -22,8 +22,11 @@ export const NuevoClientePage: React.FC = () => {
     
     try {
       setSaving(true);
-      const newCliente = await apiService.createCliente(formData);
-      navigate(`/clientes/${newCliente.id}`);
+      const newCliente = await api('/clientes', {
+        method: 'POST',
+        body: JSON.stringify(formData)
+      });
+      navigate('/clientes');
     } catch (err) {
       setError('Error al crear el cliente');
       console.error('Error creating cliente:', err);

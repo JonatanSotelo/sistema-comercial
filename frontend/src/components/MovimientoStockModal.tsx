@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Package, TrendingUp, TrendingDown, RotateCcw, ArrowRightLeft } from 'lucide-react';
-import { apiService } from '@/services/api';
+import { api } from '@/lib/api';
 import { MovimientoStock, Producto } from '@/types';
 
 interface MovimientoStockModalProps {
@@ -34,8 +34,8 @@ export const MovimientoStockModal: React.FC<MovimientoStockModalProps> = ({
 
   const loadProductos = async () => {
     try {
-      const response = await apiService.getProductos({ per_page: 100 });
-      setProductos(response.data);
+      const response = await api('/productos?per_page=100');
+      setProductos(response.items || response.data || response);
     } catch (err) {
       console.error('Error cargando productos:', err);
     }
@@ -47,10 +47,13 @@ export const MovimientoStockModal: React.FC<MovimientoStockModalProps> = ({
     setError(null);
 
     try {
-      await apiService.createMovimientoStock({
-        ...formData,
-        cantidad: parseFloat(formData.cantidad),
-        producto_id: parseInt(formData.producto_id)
+      await api('/movimientos-stock', {
+        method: 'POST',
+        body: JSON.stringify({
+          ...formData,
+          cantidad: parseFloat(formData.cantidad),
+          producto_id: parseInt(formData.producto_id)
+        })
       });
       
       onSuccess();
@@ -294,6 +297,9 @@ export const MovimientoStockModal: React.FC<MovimientoStockModalProps> = ({
     </div>
   );
 };
+
+
+
 
 
 

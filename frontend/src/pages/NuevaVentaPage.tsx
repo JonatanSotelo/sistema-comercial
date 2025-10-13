@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
-import apiService from '@/services/api';
+import { api } from '@/lib/api';
 import { VentaCreate, VentaItemCreate, Producto } from '@/types';
 
 export const NuevaVentaPage: React.FC = () => {
@@ -28,8 +28,8 @@ export const NuevaVentaPage: React.FC = () => {
     const loadProductos = async () => {
       try {
         setLoading(true);
-        const response = await apiService.getProductos();
-        setProductos(response.data);
+        const response = await api('/productos');
+        setProductos(response.items || response.data || response);
       } catch (error) {
         console.error('Error cargando productos:', error);
         alert('Error al cargar la lista de productos');
@@ -94,7 +94,10 @@ export const NuevaVentaPage: React.FC = () => {
       console.log('Enviando datos de venta:', ventaData);
       console.log('Items:', items);
       
-      await apiService.createVenta(ventaData);
+      await api('/ventas', {
+        method: 'POST',
+        body: JSON.stringify(ventaData)
+      });
       navigate('/ventas');
     } catch (e) {
       console.error('Error creando venta', e);

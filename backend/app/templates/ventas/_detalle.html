@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block title %}Detalle Venta #{{ venta.id }} - Sistema Comercial{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-3xl font-bold text-gray-800">Venta #{{ venta.id }}</h1>
+        <a href="/app/ventas" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded">
+            ← Volver
+        </a>
+    </div>
+    
+    <!-- Información de la venta -->
+    <div class="bg-white rounded-lg shadow p-6 mb-6">
+        <div class="grid grid-cols-2 gap-4">
+            <div>
+                <label class="text-sm font-medium text-gray-500">Fecha:</label>
+                <p class="text-gray-900">{{ venta.fecha[:19] if venta.fecha else '-' }}</p>
+            </div>
+            <div>
+                <label class="text-sm font-medium text-gray-500">Estado:</label>
+                <p>
+                    <span class="px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full 
+                        {% if venta.estado == 'completada' %}bg-green-100 text-green-800
+                        {% elif venta.estado == 'pendiente' %}bg-yellow-100 text-yellow-800
+                        {% else %}bg-gray-100 text-gray-800{% endif %}">
+                        {{ venta.estado|capitalize }}
+                    </span>
+                </p>
+            </div>
+            <div>
+                <label class="text-sm font-medium text-gray-500">Cliente:</label>
+                <p class="text-gray-900">{{ venta.cliente_id if venta.cliente_id else 'Consumidor Final' }}</p>
+            </div>
+            <div>
+                <label class="text-sm font-medium text-gray-500">Total:</label>
+                <p class="text-2xl font-bold text-green-600">${{ "%.2f"|format(venta.total|default(0)) }}</p>
+            </div>
+            {% if venta.observaciones %}
+            <div class="col-span-2">
+                <label class="text-sm font-medium text-gray-500">Observaciones:</label>
+                <p class="text-gray-900">{{ venta.observaciones }}</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Items de la venta -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <div class="px-6 py-4 bg-gray-50 border-b">
+            <h3 class="text-lg font-semibold text-gray-900">Productos</h3>
+        </div>
+        <table class="min-w-full">
+            <thead class="bg-gray-100">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Producto ID</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Cantidad</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Precio Unit.</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Subtotal</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for item in venta.items %}
+                <tr>
+                    <td class="px-6 py-4 text-sm text-gray-900">Producto #{{ item.producto_id }}</td>
+                    <td class="px-6 py-4 text-sm text-gray-900 text-right">{{ item.cantidad }}</td>
+                    <td class="px-6 py-4 text-sm text-gray-900 text-right">${{ "%.2f"|format(item.precio_unitario) }}</td>
+                    <td class="px-6 py-4 text-sm font-semibold text-gray-900 text-right">${{ "%.2f"|format(item.subtotal) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot class="bg-gray-50 font-bold">
+                <tr>
+                    <td colspan="3" class="px-6 py-4 text-right text-gray-900">TOTAL:</td>
+                    <td class="px-6 py-4 text-right text-xl text-green-600">${{ "%.2f"|format(venta.total) }}</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+    
+    <!-- Información adicional -->
+    <div class="bg-white rounded-lg shadow p-6 mt-6">
+        <h3 class="text-lg font-semibold mb-4">Información Adicional</h3>
+        <div class="grid grid-cols-2 gap-4 text-sm">
+            <div>
+                <label class="text-gray-500">Descuento:</label>
+                <p class="text-gray-900">${{ "%.2f"|format(venta.descuento|default(0)) }}</p>
+            </div>
+            <div>
+                <label class="text-gray-500">Impuestos:</label>
+                <p class="text-gray-900">${{ "%.2f"|format(venta.impuestos|default(0)) }}</p>
+            </div>
+            <div>
+                <label class="text-gray-500">Creado:</label>
+                <p class="text-gray-900">{{ venta.created_at[:19] if venta.created_at else '-' }}</p>
+            </div>
+            <div>
+                <label class="text-gray-500">Actualizado:</label>
+                <p class="text-gray-900">{{ venta.updated_at[:19] if venta.updated_at else '-' }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Edit, Trash2, Phone, Mail, MapPin, Calendar, User } from 'lucide-react';
 import { Cliente } from '@/types';
-import { apiService } from '@/services/api';
+import { api } from '@/lib/api';
 
 export const ClienteDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -21,7 +21,7 @@ export const ClienteDetailPage: React.FC = () => {
   const loadCliente = async (clienteId: number) => {
     try {
       setLoading(true);
-      const clienteData = await apiService.getClienteById(clienteId);
+      const clienteData = await api(`/clientes/${clienteId}`);
       setCliente(clienteData);
     } catch (err) {
       setError('Error al cargar el cliente');
@@ -35,7 +35,7 @@ export const ClienteDetailPage: React.FC = () => {
     if (!cliente) return;
     
     try {
-      await apiService.deleteCliente(cliente.id);
+      await api(`/clientes/${cliente.id}`, { method: 'DELETE' });
       navigate('/clientes');
     } catch (err) {
       setError('Error al eliminar el cliente');
@@ -240,4 +240,7 @@ export const ClienteDetailPage: React.FC = () => {
     </div>
   );
 };
+
+
+
 

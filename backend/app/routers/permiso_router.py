@@ -250,3 +250,6 @@ def inicializar_permisos_por_defecto(
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error al inicializar: {str(e)}")
 
+
+
+

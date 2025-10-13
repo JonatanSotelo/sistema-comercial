@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save, X } from 'lucide-react';
 import { Cliente, ClienteUpdate } from '@/types';
-import { apiService } from '@/services/api';
+import { api } from '@/lib/api';
 
 export const ClienteEditPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -29,7 +29,7 @@ export const ClienteEditPage: React.FC = () => {
   const loadCliente = async (clienteId: number) => {
     try {
       setLoading(true);
-      const clienteData = await apiService.getClienteById(clienteId);
+      const clienteData = await api(`/clientes/${clienteId}`);
       setCliente(clienteData);
       setFormData({
         nombre: clienteData.nombre,
@@ -52,7 +52,10 @@ export const ClienteEditPage: React.FC = () => {
 
     try {
       setSaving(true);
-      await apiService.updateCliente(cliente.id, formData);
+      await api(`/clientes/${cliente.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(formData)
+      });
       navigate(`/clientes/${cliente.id}`);
     } catch (err) {
       setError('Error al actualizar el cliente');
@@ -221,4 +224,7 @@ export const ClienteEditPage: React.FC = () => {
     </div>
   );
 };
+
+
+
 

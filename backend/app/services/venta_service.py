@@ -114,13 +114,18 @@ def actualizar_venta(db: Session, venta_id: int, data: VentaCreate) -> Venta | N
 
 def eliminar_venta(db: Session, venta_id: int) -> bool:
     """
-    MVP: elimina la venta y (ATENCIÓN) no revierte stock.
-    Lo correcto sería agregar movimientos de reversa (IN) por cada item.
-    Lo implementamos en la siguiente iteración.
+    Elimina la venta.
+    Nota: Los items asociados se eliminan en cascada.
+    ATENCIÓN: No revierte stock automáticamente.
     """
     v = obtener_venta(db, venta_id)
     if not v:
         return False
-    db.delete(v)
-    db.commit()
-    return True
+    try:
+        db.delete(v)
+        db.commit()
+        return True
+    except Exception as e:
+        db.rollback()
+        # Re-raise la excepción para que el router la maneje
+        raise e

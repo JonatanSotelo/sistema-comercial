@@ -60,3 +60,6 @@ class UserPermissionsOut(BaseModel):
     class Config:
         from_attributes = True
 
+
+
+

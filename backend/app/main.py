@@ -12,13 +12,25 @@ from app.db.base import Base  # asegura que todos los modelos estén importados
 from app.services import user_service
 from app.schemas.user_schema import UserCreate
 
+# Importar el nuevo módulo web
+from app.web.deps import add_session_middleware
+from app.web.router import router as web_router
+
+# Importar error handlers
+from app.core.error_handlers import http_exception_handler, generic_exception_handler
+from starlette.exceptions import HTTPException as StarletteHTTPException
+
 app = FastAPI(
     title=settings.APP_NAME,
-    version="1.0.0",
+    version="2.0.0",
     openapi_url="/openapi.json",
     docs_url="/docs",
     redoc_url="/redoc",
 )
+
+# Registrar error handlers
+app.add_exception_handler(StarletteHTTPException, http_exception_handler)
+app.add_exception_handler(Exception, generic_exception_handler)
 
 # CORS (ajustá orígenes si hace falta)
 app.add_middleware(
@@ -29,8 +41,14 @@ app.add_middleware(
     allow_credentials=True,
 )
 
-# Routers
+# Session Middleware para el módulo web
+add_session_middleware(app)
+
+# Routers API
 register_routers(app)
+
+# Router Web (Frontend Python-first con Jinja2 + HTMX)
+app.include_router(web_router)
 
 scheduler: BackgroundScheduler | None = None
 

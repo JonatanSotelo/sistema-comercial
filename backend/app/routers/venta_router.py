@@ -13,12 +13,12 @@ router = APIRouter(prefix="/ventas", tags=["Ventas"])
 
 @router.get("/", response_model=List[VentaOut])
 def listar(
+    q: Optional[str] = Query(None, description="Búsqueda"),
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
-    search: Optional[str] = Query(None),
     db: Session = Depends(get_db)
 ):
-    return listar_ventas(db, page=page, per_page=per_page, search=search)
+    return listar_ventas(db, page=page, per_page=per_page, search=q)
 
 @router.get("/{venta_id}", response_model=VentaOut)
 def obtener(venta_id: int, db: Session = Depends(get_db)):
@@ -40,10 +40,39 @@ def actualizar(venta_id: int, data: VentaCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Venta no encontrada")
     return v
 
+@router.patch("/{venta_id}/estado", response_model=VentaOut,
+              dependencies=[Depends(get_current_user)])
+def cambiar_estado(venta_id: int, estado: str, db: Session = Depends(get_db)):
+    """Cambia el estado de una venta."""
+    from app.models.venta_model import Venta
+    venta = db.query(Venta).filter(Venta.id == venta_id).first()
+    if not venta:
+        raise HTTPException(status_code=404, detail="Venta no encontrada")
+    
+    if estado not in ["pendiente", "completada", "cancelada"]:
+        raise HTTPException(status_code=400, detail="Estado inválido")
+    
+    venta.estado = estado
+    db.commit()
+    db.refresh(venta)
+    return venta
+
+
 @router.delete("/{venta_id}", status_code=status.HTTP_204_NO_CONTENT,
                dependencies=[Depends(get_current_user)])
 def eliminar(venta_id: int, db: Session = Depends(get_db)):
-    ok = eliminar_venta(db, venta_id)
-    if not ok:
-        raise HTTPException(status_code=404, detail="Venta no encontrada")
+    try:
+        ok = eliminar_venta(db, venta_id)
+        if not ok:
+            raise HTTPException(status_code=404, detail="Venta no encontrada")
+    except HTTPException:
+        raise
+    except Exception as e:
+        # Error de integridad referencial (foreign key constraint)
+        if "foreign key constraint" in str(e).lower() or "violates foreign key" in str(e).lower():
+            raise HTTPException(
+                status_code=400,
+                detail="No se puede eliminar la venta porque tiene restricciones de integridad"
+            )
+        raise HTTPException(status_code=500, detail=f"Error al eliminar: {str(e)}")
     return None

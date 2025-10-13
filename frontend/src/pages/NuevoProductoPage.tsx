@@ -1,7 +1,7 @@
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
-import apiService from '@/services/api';
+import { api } from '@/lib/api';
 import { FormularioProducto } from '@/types';
 
 export const NuevoProductoPage: React.FC = () => {
@@ -24,16 +24,19 @@ export const NuevoProductoPage: React.FC = () => {
 
   const onSubmit = async (data: FormularioProducto) => {
     try {
-      await apiService.createProducto({
-        nombre: data.nombre,
-        descripcion: data.descripcion,
-        codigo: data.codigo,
-        categoria: data.categoria,
-        precio: Number(data.precio),
-        costo: Number(data.costo),
-        stock: Number(data.stock),
-        stock_minimo: Number(data.stock_minimo),
-        activo: !!data.activo,
+      await api('/productos', {
+        method: 'POST',
+        body: JSON.stringify({
+          nombre: data.nombre,
+          descripcion: data.descripcion,
+          codigo: data.codigo,
+          categoria: data.categoria,
+          precio: Number(data.precio),
+          costo: Number(data.costo),
+          stock: Number(data.stock),
+          stock_minimo: Number(data.stock_minimo),
+          activo: !!data.activo,
+        })
       });
       navigate('/productos');
     } catch (e) {

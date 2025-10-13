@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Sistema Comercial{% endblock %}</title>
+    
+    <!-- Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    
+    <!-- Alpine.js para interacciones simples -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    
+    <style>
+        [x-cloak] { display: none !important; }
+    </style>
+    
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="bg-gray-100 min-h-screen">
+    
+    <!-- Navbar -->
+    {% if user %}
+    <nav class="bg-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex">
+                    <div class="flex-shrink-0 flex items-center">
+                        <span class="text-xl font-bold text-blue-600">Sistema Comercial</span>
+                    </div>
+                    <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
+                        <a href="/app/dashboard" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                            Dashboard
+                        </a>
+                        <a href="/app/productos" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                            Productos
+                        </a>
+                        <a href="/app/clientes" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                            Clientes
+                        </a>
+                        <a href="/app/proveedores" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                            Proveedores
+                        </a>
+                        <a href="/app/ventas" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                            Ventas
+                        </a>
+                        <a href="/app/compras" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                            Compras
+                        </a>
+                    </div>
+                </div>
+                <div class="flex items-center">
+                    <span class="text-gray-700 text-sm mr-4">
+                        {{ user.username|default("Usuario") }} ({{ user.role|default("user") }})
+                    </span>
+                    <a href="/app/logout" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded text-sm">
+                        Salir
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+    {% endif %}
+    
+    <!-- Main Content -->
+    <main class="{% if user %}py-8{% endif %}">
+        {% block content %}{% endblock %}
+    </main>
+    
+    <!-- Modal Container (para HTMX) -->
+    <div id="modal-container"></div>
+    
+    <!-- Toast Container (notificaciones) -->
+    <div id="toast-container" class="fixed top-4 right-4 z-50"></div>
+    
+    <script>
+        // Listener para refrescar tabla después de operaciones CRUD
+        document.body.addEventListener('refreshTable', function(evt) {
+            const tableContainer = document.getElementById('table-container');
+            if (tableContainer) {
+                htmx.trigger(tableContainer, 'refreshTable');
+            }
+        });
+        
+        // Helper para mostrar notificaciones tipo toast
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            const bgColor = type === 'success' ? 'bg-green-500' : 'bg-red-500';
+            
+            toast.className = `${bgColor} text-white px-6 py-3 rounded shadow-lg mb-2`;
+            toast.textContent = message;
+            
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+    </script>
+    
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>
+
+

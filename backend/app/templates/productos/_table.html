@@ -1,0 +1,116 @@
+<div class="bg-white rounded-lg shadow overflow-hidden">
+    <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+            <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Código</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Categoría</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Precio</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Activo</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+            </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+            {% if items %}
+                {% for item in items %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ item.id }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ item.nombre }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ item.codigo or '-' }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ item.categoria or '-' }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${{ "%.2f"|format(item.precio|default(0)) }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ item.stock|default(0) }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                        {% if item.activo %}
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Activo</span>
+                        {% else %}
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">Inactivo</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <div class="flex gap-2">
+                            <button 
+                                hx-get="/app/productos/form?id={{ item.id }}"
+                                hx-target="#modal-container"
+                                class="text-blue-600 hover:text-blue-900"
+                                title="Editar"
+                            >
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                </svg>
+                            </button>
+                            <button 
+                                hx-patch="/app/productos/{{ item.id }}/toggle"
+                                hx-trigger="click"
+                                hx-swap="none"
+                                class="text-yellow-600 hover:text-yellow-900"
+                                title="Activar/Desactivar"
+                            >
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path>
+                                </svg>
+                            </button>
+                            <button 
+                                hx-delete="/app/productos/{{ item.id }}"
+                                hx-confirm="¿Está seguro de eliminar este producto?"
+                                hx-trigger="click"
+                                hx-swap="none"
+                                class="text-red-600 hover:text-red-900"
+                                title="Eliminar"
+                            >
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                </svg>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            {% else %}
+                <tr>
+                    <td colspan="8" class="px-6 py-4 text-center text-gray-500">
+                        No hay productos para mostrar
+                    </td>
+                </tr>
+            {% endif %}
+        </tbody>
+    </table>
+    
+    <!-- Paginación -->
+    {% if total_pages > 1 %}
+    <div class="bg-gray-50 px-4 py-3 flex items-center justify-between border-t border-gray-200">
+        <div class="text-sm text-gray-700">
+            Mostrando página {{ page }} de {{ total_pages }} ({{ total }} registros)
+        </div>
+        <div class="flex gap-2">
+            {% if page > 1 %}
+            <button 
+                hx-get="/app/productos/table?page={{ page - 1 }}&size={{ size }}{% if search %}&search={{ search }}{% endif %}"
+                hx-target="#table-container"
+                hx-swap="innerHTML"
+                class="px-3 py-1 bg-white border border-gray-300 rounded hover:bg-gray-50"
+            >
+                Anterior
+            </button>
+            {% endif %}
+            
+            <span class="px-3 py-1 bg-blue-500 text-white rounded">{{ page }}</span>
+            
+            {% if page < total_pages %}
+            <button 
+                hx-get="/app/productos/table?page={{ page + 1 }}&size={{ size }}{% if search %}&search={{ search }}{% endif %}"
+                hx-target="#table-container"
+                hx-swap="innerHTML"
+                class="px-3 py-1 bg-white border border-gray-300 rounded hover:bg-gray-50"
+            >
+                Siguiente
+            </button>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+

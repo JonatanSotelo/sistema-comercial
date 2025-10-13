@@ -12,6 +12,7 @@ from app.services.user_service import UserService  # ajusta el import si difiere
 from app.schemas.user_schema import UserCreate, UserOut
 from app.core.security import hash_password
 from app.models.user_model import User
+from app.core.auth import get_current_user
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
@@ -47,6 +48,11 @@ def login_json(data: dict, db: Session = Depends(get_db)):
     if not user:
         raise HTTPException(status_code=401, detail="Usuario o clave inválidos")
     return {"access_token": create_access_token(subject=user.username), "token_type": "bearer"}
+
+@router.get("/me", response_model=UserOut)
+def get_me(current_user: User = Depends(get_current_user)):
+    """Obtiene los datos del usuario actual autenticado"""
+    return UserOut.model_validate(current_user)
 
 @router.post("/register", response_model=UserOut, status_code=status.HTTP_201_CREATED)
 def register(user_data: UserCreate, db: Session = Depends(get_db)):

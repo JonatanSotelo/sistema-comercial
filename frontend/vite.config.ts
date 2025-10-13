@@ -18,10 +18,66 @@ export default defineConfig({
   server: {
     port: 3000,
     proxy: {
-      '/api': {
+      // Proxy para todas las rutas de la API
+      '/auth': {
         target: backendTarget,
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, '')
+      },
+      '/usuarios': {
+        target: backendTarget,
+        changeOrigin: true,
+      },
+      '/productos': {
+        target: backendTarget,
+        changeOrigin: true,
+      },
+      '/clientes': {
+        target: backendTarget,
+        changeOrigin: true,
+      },
+      '/proveedores': {
+        target: backendTarget,
+        changeOrigin: true,
+      },
+      '/compras': {
+        target: backendTarget,
+        changeOrigin: true,
+      },
+      '/ventas': {
+        target: backendTarget,
+        changeOrigin: true,
+      },
+      '/inventario': {
+        target: backendTarget,
+        changeOrigin: true,
+      },
+      '/notificaciones': {
+        target: backendTarget,
+        changeOrigin: true,
+      },
+      '/dashboard': {
+        target: backendTarget,
+        changeOrigin: true,
+      },
+      '/reportes': {
+        target: backendTarget,
+        changeOrigin: true,
+      },
+      '/metricas': {
+        target: backendTarget,
+        changeOrigin: true,
+      },
+      '/backup': {
+        target: backendTarget,
+        changeOrigin: true,
+      },
+      '/docs': {
+        target: backendTarget,
+        changeOrigin: true,
+      },
+      '/openapi.json': {
+        target: backendTarget,
+        changeOrigin: true,
       }
     }
   },

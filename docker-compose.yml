@@ -1,0 +1,118 @@
+version: '3.8'
+
+# ============================================================
+# Docker Compose - Sistema Comercial Python-First
+# ============================================================
+# Este archivo está actualizado para el nuevo frontend Python
+# Ya NO incluye contenedor frontend React (obsoleto)
+# ============================================================
+
+services:
+  # ==================== BASE DE DATOS ====================
+  db:
+    image: postgres:16
+    container_name: sc_postgres
+    environment:
+      POSTGRES_USER: sc_user
+      POSTGRES_PASSWORD: sc_pass
+      POSTGRES_DB: sc_db
+    ports:
+      - "5433:5432"  # Puerto 5433 en host para evitar conflictos
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sc_user -d sc_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks:
+      - sc_network
+
+  # ==================== REDIS ====================
+  redis:
+    image: redis:7-alpine
+    container_name: sc_redis
+    ports:
+      - "6379:6379"
+    networks:
+      - sc_network
+
+  # ==================== PGADMIN (Opcional) ====================
+  pgadmin:
+    image: dpage/pgadmin4:8.10
+    container_name: sc_pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - db
+    networks:
+      - sc_network
+    profiles:
+      - tools  # Solo se inicia si se especifica: docker-compose --profile tools up
+
+  # ==================== BACKEND + FRONTEND PYTHON ====================
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: sc_backend
+    environment:
+      # Base de datos
+      DATABASE_URL: postgresql+psycopg2://sc_user:sc_pass@db:5432/sc_db
+      
+      # Usuarios iniciales
+      ADMIN_USERNAME: admin
+      ADMIN_PASSWORD: admin123
+      ADMIN_EMAIL: admin@example.com
+      ADMIN_FORCE_UPDATE: "true"
+      
+      USER_USERNAME: user
+      USER_PASSWORD: user123
+      USER_EMAIL: user@example.com
+      
+      # Configuración API
+      SECRET_KEY: tu-secret-key-muy-segura-cambiala-en-produccion
+      ALGORITHM: HS256
+      ACCESS_TOKEN_EXPIRE_MINUTES: 1440
+      
+      # Configuración Web Frontend Python
+      API_BASE_URL: http://127.0.0.1:8000
+      USE_TEST_CLIENT: "true"
+      
+      # Otros
+      ENV: development
+      APP_NAME: "Sistema Comercial"
+    volumes:
+      - ./backend:/app
+      - backups_data:/app/backups
+    ports:
+      - "8000:8000"  # Backend API + Frontend Web
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - sc_network
+    command: >
+      sh -c "
+        echo '🚀 Iniciando Sistema Comercial - Python Frontend' &&
+        uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+      "
+
+# ==================== VOLÚMENES ====================
+volumes:
+  pg_data:
+    name: sc_postgres_data
+  backups_data:
+    name: sc_backups_data
+
+# ==================== REDES ====================
+networks:
+  sc_network:
+    name: sc_network
+    driver: bridge
+
