@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>Sistema Comercial — Diseño funcional + App de Ruteo y Tracking</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --fg: #111;
+      --muted: #555;
+      --bg: #fff;
+      --acc: #0b5fff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+      color: var(--fg);
+      background: var(--bg);
+      line-height: 1.5;
+      margin: 0;
+      padding: 2rem 1.25rem;
+    }
+    .container {
+      max-width: 980px;
+      margin: 0 auto;
+      background: white;
+    }
+    h1, h2, h3, h4 {
+      line-height: 1.25;
+      margin: 1.6rem 0 0.6rem;
+    }
+    h1 { font-size: 2rem; margin-top: 0; }
+    h2 { font-size: 1.4rem; color: #0b5fff; }
+    h3 { font-size: 1.1rem; }
+    p { margin: 0.5rem 0 0.75rem; }
+    code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+    pre {
+      background: #f6f8fa;
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      overflow-x: auto;
+      border: 1px solid #eee;
+    }
+    ol, ul { margin: 0.5rem 0 0.75rem 1.25rem; }
+    .muted { color: var(--muted); }
+    .chip { display: inline-block; padding: 0.1rem 0.5rem; border:1px solid #ddd; border-radius: 999px; font-size: 0.85rem; margin-right: 0.25rem; }
+    .kbd { display: inline-block; border:1px solid #bbb; border-bottom-width: 2px; padding: 0.1rem 0.35rem; border-radius: 4px; font-size: 0.85rem; background:#fafafa; }
+    table { border-collapse: collapse; width: 100%; margin: 0.5rem 0 1rem; }
+    th, td { text-align: left; border: 1px solid #e5e5e5; padding: 6px 8px; vertical-align: top; }
+    th { background: #f8fbff; }
+    .toc a { text-decoration: none; color: var(--acc); }
+    .footer { margin-top: 2rem; font-size: 0.9rem; color: var(--muted); }
+    @media print {
+      a[href]:after { content: "" !important; }
+      body { padding: 0; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>Sistema Comercial — Diseño funcional + App de Ruteo y Tracking</h1>
+    <p class="muted">Versión: 2025-10-14 · Autoría: ChatGPT (Lead Dev) + Joni (Product) · Proyecto: “Sistema de Gestión Comercial (MVP)”</p>
+  </header>
+
+  <section class="toc">
+    <h2>Índice</h2>
+    <ol>
+      <li><a href="#alcance">Alcance</a></li>
+      <li><a href="#modulos">Mapa de módulos & estados</a></li>
+      <li><a href="#datos">Modelo de datos mínimo (esqueleto)</a></li>
+      <li><a href="#flujos">Flujos por módulo (paso a paso)</a></li>
+      <li><a href="#documentos">Documentos internos & adjuntos</a></li>
+      <li><a href="#pagos">Pagos y saldos (CxC/CxP) — básico</a></li>
+      <li><a href="#seguridad">Seguridad, roles y auditoría</a></li>
+      <li><a href="#barcode">Lectores/Impresión de códigos de barras</a></li>
+      <li><a href="#dashboard">Dashboard de Supervisión (KPIs)</a></li>
+      <li><a href="#ruteo">App de Ruteo y Tracking en tiempo real</a></li>
+      <li><a href="#roadmap">Roadmap por Fases</a></li>
+      <li><a href="#primer-sprint">Sugerencia de primer sprint (co-trabajo)</a></li>
+      <li><a href="#roles">Matriz RACI (roles)</a></li>
+      <li><a href="#glosario">Glosario</a></li>
+    </ol>
+  </section>
+
+  <section id="alcance">
+    <h2>1) Alcance</h2>
+    <p>Este documento define el diseño funcional inicial del ERP liviano orientado a PyMEs con módulos de Proveedores, Compras/Pedidos, Stock/Inventario, Ventas, Logística/Entregas, Pagos, Adjuntos y Supervisión; y agrega una App de Ruteo con tracking en tiempo real.</p>
+    <p>Objetivo: cerrar el circuito <em>pedido → compra → recepción → stock → venta → entrega → cierre</em> con auditoría y KPIs básicos, dejando preparada la integración con facturación fiscal y contabilidad para fases posteriores.</p>
+  </section>
+
+  <section id="modulos">
+    <h2>2) Mapa de módulos &amp; estados</h2>
+
+    <h3>Compras</h3>
+    <p><span class="chip">Borrador</span> → <span class="chip">Pedido (Pendiente)</span> → <span class="chip">Aprobado</span> → <span class="chip">Recepción Parcial/Total</span> → <span class="chip">Cerrado</span></p>
+
+    <h3>Ventas</h3>
+    <p><span class="chip">Presupuesto</span> → <span class="chip">Pedido</span> → <span class="chip">Factura/Remito</span> → <span class="chip">Preparación</span> → <span class="chip">En tránsito</span> → <span class="chip">Entregado</span> → <span class="chip">Cerrado</span></p>
+
+    <h3>Logística (Entregas)</h3>
+    <p><span class="chip">Pendiente</span> → <span class="chip">Asignado</span> → <span class="chip">En tránsito</span> → <span class="chip">Entregado</span> (<span class="chip">Fallido</span> si no se pudo).</p>
+
+    <h3>Stock (Kardex)</h3>
+    <p>Cada compra/recepción/venta/ajuste genera un movimiento <strong>IN/OUT</strong> auditable.</p>
+  </section>
+
+  <section id="datos">
+    <h2>3) Modelo de datos mínimo (esqueleto)</h2>
+    <p>Se sugiere PostgreSQL 16 + JSONB para campos flexibles.</p>
+
+    <h3>Productos</h3>
+    <table>
+      <tr><th>Campo</th><th>Tipo</th><th>Notas</th></tr>
+      <tr><td>id</td><td>uuid</td><td>PK</td></tr>
+      <tr><td>sku</td><td>string</td><td>código interno</td></tr>
+      <tr><td>barcode</td><td>string</td><td>EAN/Code128 (opcional)</td></tr>
+      <tr><td>nombre</td><td>string</td><td></td></tr>
+      <tr><td>precio_venta</td><td>numeric</td><td>último precio</td></tr>
+      <tr><td>costo_ultimo</td><td>numeric</td><td>actualizado en recepción</td></tr>
+      <tr><td>activo</td><td>bool</td><td></td></tr>
+      <tr><td>created_at/updated_at</td><td>ts</td><td></td></tr>
+    </table>
+
+    <h3>Stock</h3>
+    <table>
+      <tr><th>Tabla</th><th>Campos clave</th><th>Descripción</th></tr>
+      <tr><td>depositos</td><td>id, nombre</td><td>Depósitos/almacenes</td></tr>
+      <tr><td>ubicaciones</td><td>id, deposito_id, etiqueta, extra JSONB</td><td>piso/sección/fila/estante</td></tr>
+      <tr><td>stock_items</td><td>id, producto_id, deposito_id, ubicacion_id, cantidad, extra JSONB</td><td>estado actual por ubicación</td></tr>
+      <tr><td>inventory_moves</td><td>id, ts, tipo IN/OUT, producto_id, cantidad, deposito_id, ubicacion_id, doc_origen(tipo+id), usuario_id</td><td>kardex auditable</td></tr>
+    </table>
+
+    <h3>Proveedores &amp; Compras</h3>
+    <table>
+      <tr><th>Tabla</th><th>Campos clave</th><th>Descripción</th></tr>
+      <tr><td>proveedores</td><td>id, nombre, direccion, mail, telefono, iva_cond</td><td>Alta básica</td></tr>
+      <tr><td>purchase_orders</td><td>id, numero, proveedor_id, status, tipo_comprobante (A/B/C/Remito), total, notas</td><td>Pedido/Compra</td></tr>
+      <tr><td>purchase_order_items</td><td>id, purchase_order_id, producto_id, cantidad, costo_unit</td><td>Detalle</td></tr>
+      <tr><td>goods_receipts</td><td>id, purchase_order_id, ts, parcial_total</td><td>Recepciones</td></tr>
+    </table>
+
+    <h3>Clientes &amp; Ventas</h3>
+    <table>
+      <tr><th>Tabla</th><th>Campos clave</th><th>Descripción</th></tr>
+      <tr><td>clientes</td><td>id, nombre, direccion, mail, telefono, iva_cond</td><td>Incluye “Mostrador” genérico</td></tr>
+      <tr><td>sales_orders</td><td>id, numero, cliente_id, status, tipo_comprobante (Factura/Remito), retiro_envio, costo_envio_a_cargo (cliente/empresa)</td><td>Venta</td></tr>
+      <tr><td>sales_order_items</td><td>id, sales_order_id, producto_id, cantidad, precio_unit</td><td>Detalle</td></tr>
+      <tr><td>deliveries</td><td>id, sales_order_id, status, asignado_a_nombre, asignado_a_tel, direccion_entrega, ventanas_horarias JSONB</td><td>Logística</td></tr>
+    </table>
+
+    <h3>Pagos &amp; Adjuntos</h3>
+    <table>
+      <tr><th>Tabla</th><th>Campos clave</th><th>Descripción</th></tr>
+      <tr><td>payments</td><td>id, origen (venta/compra), doc_id, medio (efectivo/cheque/transferencia/tarjeta), monto, ts</td><td>Registro simple</td></tr>
+      <tr><td>attachments</td><td>id, origen_tabla, origen_id, tipo (factura/remito/otro), nombre, url, subido_por, ts</td><td>Archivos</td></tr>
+      <tr><td>audit_log</td><td>id, tabla, accion, usuario_id, ts, diff JSONB</td><td>Auditoría</td></tr>
+    </table>
+  </section>
+
+  <section id="flujos">
+    <h2>4) Flujos por módulo (paso a paso)</h2>
+
+    <h3>Compras</h3>
+    <ol>
+      <li>Crear <strong>Pedido de compra</strong> (proveedor, ítems con cantidad y costo → <em>status=Borrador</em>).</li>
+      <li>Confirmar → <em>Pendiente</em>. Adjuntar factura o presupuesto si aplica.</li>
+      <li>Aprobar → <em>Aprobado</em>.</li>
+      <li>Recepción parcial/total → crea <span class="kbd">IN</span> en kardex y actualiza <em>costo_ultimo</em>.</li>
+      <li>Cerrar compra.</li>
+    </ol>
+
+    <h3>Inventario</h3>
+    <ul>
+      <li>Consulta por producto muestra ubicación (depósito/etiqueta) y campos custom (JSONB).</li>
+      <li>Ajustes manuales (motivo) generan movimientos IN/OUT.</li>
+    </ul>
+
+    <h3>Ventas</h3>
+    <ol>
+      <li>Cargar cliente o usar <strong>Mostrador</strong>. Elegir productos por nombre, <em>sku</em> o <em>barcode</em>.</li>
+      <li>Elegir <em>Factura</em> o <em>Remito</em>; definir retiro o envío y quién paga el costo.</li>
+      <li>Confirmar → <em>Factura/Remito</em> y generar <span class="kbd">OUT</span> (reserva o salida según política).</li>
+      <li>Si requiere envío, crear <strong>Entrega</strong> (logística) y remito de entrega.</li>
+      <li>Cerrar venta cuando esté entregada y cobrada.</li>
+    </ol>
+
+    <h3>Logística</h3>
+    <ol>
+      <li>Ver cola de entregas: asignar responsable (nombre/teléfono) y dirección de entrega.</li>
+      <li>Al regresar, adjuntar remito firmado y marcar <em>Entregado</em> (o <em>Fallido</em> con motivo).</li>
+    </ol>
+  </section>
+
+  <section id="documentos">
+    <h2>5) Documentos internos &amp; adjuntos</h2>
+    <ul>
+      <li>Numeradores para: Pedido de compra, Factura/Remito, Entrega.</li>
+      <li>Generación de PDF para Facturas/Remitos internos (impresión rápida).</li>
+      <li>Adjuntos en compras/ventas/logística (facturas, remitos firmados).</li>
+    </ul>
+  </section>
+
+  <section id="pagos">
+    <h2>6) Pagos y saldos (CxC/CxP) — básico</h2>
+    <ul>
+      <li>Registrar pagos/cobros por medio (efectivo/cheque/transferencia/tarjeta).</li>
+      <li>Saldo por cliente/proveedor por documento; vista de próximos 7/30 días.</li>
+      <li>Notas de crédito/devoluciones (fase 2).</li>
+    </ul>
+  </section>
+
+  <section id="seguridad">
+    <h2>7) Seguridad, roles y auditoría</h2>
+    <ul>
+      <li>Roles sugeridos: <em>compras</em>, <em>ventas</em>, <em>logística</em>, <em>contable</em>, <em>supervisión</em>.</li>
+      <li>Auditoría en CRUD y movimientos de stock.</li>
+      <li>Reglas: permitir o no stock negativo; ventas sin stock (configurable).</li>
+    </ul>
+  </section>
+
+  <section id="barcode">
+    <h2>8) Lectores/Impresión de códigos de barras</h2>
+    <ul>
+      <li>Entrada con <em>auto-focus</em> en el front: los lectores actúan como teclado.</li>
+      <li>Endpoint búsqueda: <code>GET /productos?barcode=CODE</code> o <code>GET /productos/by-barcode/CODE</code>.</li>
+      <li>Fase 2: impresión de etiquetas (generación de EAN/Code128).</li>
+    </ul>
+  </section>
+
+  <section id="dashboard">
+    <h2>9) Dashboard de Supervisión (KPIs)</h2>
+    <ul>
+      <li>Ventas hoy/mes, top productos, entregas pendientes, compras abiertas.</li>
+      <li>Quiebres de stock, CxC/CxP próximos 7 días.</li>
+    </ul>
+  </section>
+
+  <section id="ruteo">
+    <h2>10) App de Ruteo y Tracking en tiempo real</h2>
+    <h3>Objetivo</h3>
+    <p>Optimizar hojas de ruta para múltiples entregas (vehículo único o flota) y ofrecer tracking en tiempo real para cliente y vendedor, marcando entrega desde el móvil del repartidor.</p>
+
+    <h3>Arquitectura propuesta</h3>
+    <ul>
+      <li><strong>Servicio de ruteo</strong> (microservicio): calcula ruta óptima con <em>Google Maps Distance Matrix + Directions</em>, o alternativa <em>OSRM/GraphHopper</em> (OpenStreetMap) si se prefiere menor costo.</li>
+      <li><strong>App móvil / PWA Logística</strong>: inicio/fin de turno, lista de paradas (stops), navegación paso a paso (abre Google Maps nativo), botón “Entregado/No Entregado”, captura de firma/foto.</li>
+      <li><strong>Tracking web</strong>: enlace por entrega (<code>/tracking/&lt;token&gt;</code>) que muestra posición y ETA en tiempo real.</li>
+      <li><strong>Tiempo real</strong>: WebSockets/SSE para publicar la ubicación viva del repartidor (frecuencia configurable, p.ej. cada 10–30s).</li>
+      <li><strong>Persistencia</strong>: posiciones en <code>delivery_positions</code> (con retención) y estado de cada <code>delivery_stop</code>.</li>
+      <li><strong>Privacidad</strong>: consentimiento del repartidor y del cliente; tokens expiran cuando la entrega finaliza.</li>
+    </ul>
+
+    <h3>Modelo de datos (adiciones)</h3>
+    <table>
+      <tr><th>Tabla</th><th>Campos clave</th><th>Descripción</th></tr>
+      <tr><td>routes</td><td>id, fecha, vehiculo/driver_id, origen, parametros JSONB</td><td>Ejecuta 1..n entregas</td></tr>
+      <tr><td>route_stops</td><td>id, route_id, delivery_id, orden, eta, estado</td><td>Secuencia de paradas</td></tr>
+      <tr><td>delivery_positions</td><td>id, delivery_id, ts, lat, lng, precision</td><td>Trazas de ubicación</td></tr>
+      <tr><td>delivery_proofs</td><td>id, delivery_id, ts, tipo (firma/foto), url</td><td>Pruebas de entrega</td></tr>
+      <tr><td>tracking_tokens</td><td>id, delivery_id, token, expira_ts</td><td>Link público temporal</td></tr>
+    </table>
+
+    <h3>API (borrador)</h3>
+<pre>POST   /routing/plan
+  body: { origen, paradas:[{ delivery_id, direccion }], estrategia, ventanas_horarias? }
+  resp: { route_id, stops:[{ delivery_id, orden, eta }] }
+
+GET    /routing/routes/{'}}route_id{{'}
+GET    /deliveries/{'}}id{{'}/tracking             → datos para tracking público
+WS/SSE /deliveries/{'}}id{{'}/positions/stream     → posiciones en tiempo real
+POST   /deliveries/{'}}id{{'}/events               → entregado / fallido + notas, adjuntos
+</pre>
+
+    <h3>Selección de mapas</h3>
+    <ul>
+      <li><strong>Google Maps</strong>: calidad superior de ETA y rutas urbanas; costo por uso (Distance Matrix, Directions, Maps JS/SDK).</li>
+      <li><strong>OSRM/GraphHopper + OSM</strong>: costo bajo/propio, requiere hosting/afinación.</li>
+    </ul>
+
+    <h3>UX del repartidor</h3>
+    <ol>
+      <li>Ver ruta del día con lista de paradas en orden.</li>
+      <li>Tocar una parada → “Navegar” (abre Google Maps) o “Detalle”.</li>
+      <li>Al llegar: “Entregado” (opcional firma/foto) o “Fallido” (motivo).</li>
+      <li>La app envía posición periódica y estados → el cliente ve el tracking.</li>
+    </ol>
+  </section>
+
+  <section id="roadmap">
+    <h2>11) Roadmap por Fases</h2>
+
+    <h3>Fase 1 — MVP++ (ahora)</h3>
+    <ul>
+      <li>Estados y numeradores en compras/ventas/entregas.</li>
+      <li>Kardex (<code>inventory_moves</code>), depósitos/ubicaciones y JSONB de campos custom.</li>
+      <li>Cliente genérico, adjuntos, pagos simples.</li>
+      <li>Entrega básica y remito PDF; búsqueda por <em>barcode</em>.</li>
+      <li>Dashboard básico.</li>
+    </ul>
+
+    <h3>Fase 2</h3>
+    <ul>
+      <li>AFIP e-Factura (A/B/C), CxC/CxP avanzado y conciliación bancaria.</li>
+      <li>Impresión/etiquetas de códigos de barras.</li>
+      <li>Ruteo: primer despliegue productivo (Google u OSRM) + tracking público.</li>
+    </ul>
+
+    <h3>Fase 3</h3>
+    <ul>
+      <li>RR.HH. (asistencias/licencias) y BI avanzado.</li>
+      <li>Optimización de flota (múltiples vehículos, ventanas horarias, capacidad).</li>
+    </ul>
+  </section>
+
+  <section id="primer-sprint">
+    <h2>12) Sugerencia de primer sprint (co-trabajo sin estimar tiempos)</h2>
+    <ol>
+      <li>Agregar campos y tablas base (status, numero, inventory_moves, attachments, deliveries).</li>
+      <li>Endpoints mínimos por módulo (compras: aprobar/recepcionar; ventas: facturar/remitir; entregas: asignar/cerrar).</li>
+      <li>Front: forms simples con lector de barras (auto-focus) y vista de ubicaciones.</li>
+      <li>PDF de factura/remito interno y adjuntos.</li>
+      <li>Dashboard con 5 KPIs (ventas día/mes, top 5, pendientes de entrega, compras abiertas, quiebres).</li>
+      <li>Esqueleto del microservicio de ruteo (contratos de API y mock).</li>
+    </ol>
+    <p class="muted">Nota: evitamos estimaciones de tiempo; priorizamos entregables concretos por iteración.</p>
+  </section>
+
+  <section id="roles">
+    <h2>13) Matriz RACI (roles)</h2>
+    <table>
+      <tr><th>Tarea</th><th>R</th><th>A</th><th>C</th><th>I</th></tr>
+      <tr><td>Definir estados & numeradores</td><td>Lead Dev</td><td>Product</td><td>Ventas/Compras</td><td>Supervisión</td></tr>
+      <tr><td>Kardex & ubicaciones</td><td>Lead Dev</td><td>Product</td><td>Logística</td><td>Supervisión</td></tr>
+      <tr><td>PDFs y Adjuntos</td><td>Front/Back</td><td>Lead Dev</td><td>Ventas/Compras</td><td>Contable</td></tr>
+      <tr><td>Pagos simples</td><td>Back</td><td>Lead Dev</td><td>Contable</td><td>Supervisión</td></tr>
+      <tr><td>App ruteo/tracking</td><td>Mobile/Web</td><td>Lead Dev</td><td>Logística</td><td>Ventas/Cliente</td></tr>
+    </table>
+  </section>
+
+  <section id="glosario">
+    <h2>14) Glosario</h2>
+    <ul>
+      <li><strong>Kardex</strong>: registro de movimientos de stock (IN/OUT) auditable.</li>
+      <li><strong>JSONB</strong>: tipo de campo en PostgreSQL para datos flexibles.</li>
+      <li><strong>Remito</strong>: comprobante de traslado/entrega de mercadería.</li>
+      <li><strong>Tracking</strong>: seguimiento en tiempo real de la entrega con ETA.</li>
+    </ul>
+  </section>
+
+  <div class="footer">
+    <p>© 2025 Sistema Comercial (MVP). Documento generado para impresión y estudio.</p>
+  </div>
+</div>
+</body>
+</html>
