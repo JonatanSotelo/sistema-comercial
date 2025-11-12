@@ -6,11 +6,20 @@ services:
       POSTGRES_DB: appdb
       POSTGRES_USER: appuser
       POSTGRES_PASSWORD: apppass
+    ports:
+      - "5432:5432"
     volumes:
       - sc_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   sc_redis:
     image: redis:7
+    ports:
+      - "6379:6379"
     volumes:
       - sc_redis_data:/data
 
@@ -18,17 +27,29 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     environment:
       DATABASE_URL: postgresql+psycopg2://appuser:apppass@sc_postgres:5432/appdb
       REDIS_URL: redis://sc_redis:6379/0
       API_BASE_URL: http://localhost:8000
-      SECRET_KEY: change-me
+      SECRET_KEY: dev-secret
+    volumes:
+      - ./backend:/app
     ports:
       - "8000:8000"
     depends_on:
       - sc_postgres
       - sc_redis
+
+  sc_pgadmin:
+    image: dpage/pgadmin4:8
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - sc_postgres
 
 volumes:
   sc_pg_data:

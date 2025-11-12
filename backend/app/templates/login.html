@@ -1,0 +1,17 @@
+
+{% extends "base.html" %}
+{% block content %}
+<h1>Ingresar</h1>
+<form method="post" action="/app/login">
+  <div style="display:flex;flex-direction:column;gap:.5rem;max-width:360px">
+    <label>Usuario
+      <input type="text" name="username" required>
+    </label>
+    <label>Contraseña
+      <input type="password" name="password" required>
+    </label>
+    <button class="btn" type="submit">Entrar</button>
+    {% if error %}<div class="flash error">{{ error }}</div>{% endif %}
+  </div>
+</form>
+{% endblock %}

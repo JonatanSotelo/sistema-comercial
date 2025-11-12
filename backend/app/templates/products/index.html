@@ -1,0 +1,29 @@
+
+{% extends "base.html" %}
+{% block content %}
+<h1>Productos</h1>
+
+<div class="search">
+  <input id="q" type="search" placeholder="Buscar..." name="q"
+         hx-get="/app/productos/table"
+         hx-trigger="keyup changed delay:300ms"
+         hx-target="#tabla"
+         hx-include="#q,#size"
+  >
+  <select id="size" name="size"
+          hx-get="/app/productos/table"
+          hx-trigger="change"
+          hx-target="#tabla"
+          hx-include="#q,#size">
+    <option value="10">10</option>
+    <option value="20" selected>20</option>
+    <option value="50">50</option>
+  </select>
+  <a class="btn" href="/app/productos/export?format=csv">Export CSV</a>
+  <a class="btn" href="/app/productos/export?format=xlsx">Export XLSX</a>
+</div>
+
+<div id="tabla" hx-get="/app/productos/table" hx-trigger="load">
+  Cargando…
+</div>
+{% endblock %}

@@ -2,10 +2,13 @@
 from fastapi import FastAPI
 import os
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.sessions import SessionMiddleware
+from fastapi.staticfiles import StaticFiles
 from apscheduler.schedulers.background import BackgroundScheduler
 
 from app.core.settings import settings
 from app.routers import register_routers
+from app.web.router import router as web_router
 from app.db.database import SessionLocal
 from app.db.database import engine
 from app.db.base import Base  # asegura que todos los modelos estén importados
@@ -28,6 +31,13 @@ app.add_middleware(
     allow_headers=["*"],
     allow_credentials=True,
 )
+
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=os.environ.get("SECRET_KEY", "dev-secret"),
+)
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
+app.include_router(web_router)
 
 # Routers
 register_routers(app)
