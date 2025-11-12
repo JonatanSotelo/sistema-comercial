@@ -7,6 +7,30 @@ from .deps import get_api
 templates = Jinja2Templates(directory="app/templates")
 router = APIRouter()
 
+
+def _to_float(value: str):
+    if value is None:
+        return None
+    value = value.strip()
+    if "," in value and "." in value:
+        value = value.replace(".", "").replace(",", ".")
+    elif "," in value:
+        value = value.replace(",", ".")
+    try:
+        return float(value)
+    except Exception:
+        return None
+
+
+def _to_int(value: str):
+    if value is None:
+        return None
+    value = value.strip().replace(".", "").replace(",", "")
+    try:
+        return int(value)
+    except Exception:
+        return None
+
 @router.get("/productos")
 async def productos_index(request: Request):
     user = request.session.get("user", "—")
@@ -87,26 +111,37 @@ async def productos_form_edit(request: Request, pid: int):
 async def productos_create(
     request: Request,
     nombre: str = Form(...),
-    precio: float = Form(...),
-    stock: int = Form(...),
+    precio: str = Form(...),
+    stock: str = Form(...),
+    is_active: str = Form("true"),
 ):
     api = get_api(request)
-    data = {"nombre": nombre, "precio": precio, "stock": stock, "is_active": True}
-    try:
-        await api.create_producto(data)
-    except Exception:
-        producto = {"id": None, "nombre": nombre, "precio": precio, "stock": stock, "is_active": True}
+    precio_val = _to_float(precio)
+    stock_val = _to_int(stock)
+    active = is_active.lower() == "true"
+
+    if precio_val is None or stock_val is None or not nombre.strip():
+        producto = {"id": None, "nombre": nombre, "precio": precio, "stock": stock, "is_active": active}
         return templates.TemplateResponse(
             "products/_form.html",
-            {
-                "request": request,
-                "features": {"productos": True},
-                "user": request.session.get("user", "—"),
-                "producto": producto,
-                "title": "Nuevo producto",
-                "error": "No se pudo crear. Verifica datos.",
-            },
+            {"request": request, "producto": producto, "error": "Datos inválidos (precio/stock)."},
+            headers={"HX-Retarget": "#form-container", "HX-Reswap": "innerHTML"},
+            status_code=400,
         )
+
+    try:
+        await api.create_producto(
+            {"nombre": nombre.strip(), "precio": precio_val, "stock": stock_val, "is_active": active}
+        )
+    except Exception:
+        producto = {"id": None, "nombre": nombre, "precio": precio, "stock": stock, "is_active": active}
+        return templates.TemplateResponse(
+            "products/_form.html",
+            {"request": request, "producto": producto, "error": "No se pudo crear. Verifica datos."},
+            headers={"HX-Retarget": "#form-container", "HX-Reswap": "innerHTML"},
+            status_code=400,
+        )
+
     return await productos_table(request, q="", page=1, size=20)
 
 @router.post("/productos/update/{pid}")
@@ -114,28 +149,37 @@ async def productos_update(
     request: Request,
     pid: int,
     nombre: str = Form(...),
-    precio: float = Form(...),
-    stock: int = Form(...),
+    precio: str = Form(...),
+    stock: str = Form(...),
     is_active: str = Form("true"),
 ):
     api = get_api(request)
+    precio_val = _to_float(precio)
+    stock_val = _to_int(stock)
     active = is_active.lower() == "true"
-    data = {"nombre": nombre, "precio": precio, "stock": stock, "is_active": active}
+
+    if precio_val is None or stock_val is None or not nombre.strip():
+        producto = {"id": pid, "nombre": nombre, "precio": precio, "stock": stock, "is_active": active}
+        return templates.TemplateResponse(
+            "products/_form.html",
+            {"request": request, "producto": producto, "error": "Datos inválidos (precio/stock)."},
+            headers={"HX-Retarget": "#form-container", "HX-Reswap": "innerHTML"},
+            status_code=400,
+        )
+
     try:
-        await api.update_producto(pid, data)
+        await api.update_producto(
+            pid, {"nombre": nombre.strip(), "precio": precio_val, "stock": stock_val, "is_active": active}
+        )
     except Exception:
         producto = {"id": pid, "nombre": nombre, "precio": precio, "stock": stock, "is_active": active}
         return templates.TemplateResponse(
             "products/_form.html",
-            {
-                "request": request,
-                "features": {"productos": True},
-                "user": request.session.get("user", "—"),
-                "producto": producto,
-                "title": f"Editar {nombre}",
-                "error": "No se pudo actualizar.",
-            },
+            {"request": request, "producto": producto, "error": "No se pudo actualizar."},
+            headers={"HX-Retarget": "#form-container", "HX-Reswap": "innerHTML"},
+            status_code=400,
         )
+
     return await productos_table(request, q="", page=1, size=20)
 
 @router.post("/productos/toggle/{pid}")

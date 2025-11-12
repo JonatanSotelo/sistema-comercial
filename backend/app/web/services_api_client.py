@@ -17,14 +17,41 @@ class ApiClient:
         return headers
 
     async def login(self, username: str, password: str) -> Optional[str]:
-        # Ajustá la ruta si tu backend usa /auth/oauth2/token
-        url = f"{self.base_url}/auth/login"
-        data = {"username": username, "password": password}
-        async with httpx.AsyncClient() as client:
-            r = await client.post(url, data=data, headers={"Accept": "application/json"})
-            r.raise_for_status()
-            payload = r.json()
-            return payload.get("access_token")
+        # Intento 1: /auth/login con payload JSON
+        try:
+            async with httpx.AsyncClient() as client:
+                r = await client.post(
+                    f"{self.base_url}/auth/login",
+                    json={"username": username, "password": password},
+                    headers={"Accept": "application/json"},
+                    timeout=30,
+                )
+                if r.status_code < 400:
+                    data = r.json()
+                    token = data.get("access_token") or data.get("token") or data.get("access")
+                    if token:
+                        return token
+        except Exception:
+            pass
+
+        # Intento 2: OAuth2 password flow (/auth/oauth2/token)
+        try:
+            async with httpx.AsyncClient() as client:
+                r = await client.post(
+                    f"{self.base_url}/auth/oauth2/token",
+                    data={"username": username, "password": password, "grant_type": "password"},
+                    headers={"Accept": "application/json"},
+                    timeout=30,
+                )
+                if r.status_code < 400:
+                    data = r.json()
+                    token = data.get("access_token") or data.get("token") or data.get("access")
+                    if token:
+                        return token
+        except Exception:
+            pass
+
+        return None
 
     async def get_features(self) -> Dict[str, Any]:
         url = f"{self.base_url}/features"
