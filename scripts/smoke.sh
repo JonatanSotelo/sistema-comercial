@@ -19,4 +19,12 @@ echo "[4/4] GET /app/productos/table (HTMX partial)"
 code=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/app/productos/table")
 test "$code" = "200" -o "$code" = "302"
 
+echo "[5/6] GET /app/clientes"
+code=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/app/clientes")
+test "$code" = "200" -o "$code" = "302"
+
+echo "[6/6] GET /app/clientes/table"
+code=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/app/clientes/table")
+test "$code" = "200" -o "$code" = "302"
+
 echo "OK smoke"

@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Clientes</h1>
+
+<div class="search">
+  <input id="clientes-q" type="search" placeholder="Buscar..." name="q"
+         hx-get="/app/clientes/table"
+         hx-trigger="keyup changed delay:300ms"
+         hx-target="#clientes-tabla"
+         hx-include="#clientes-q,#clientes-size">
+  <select id="clientes-size" name="size"
+          hx-get="/app/clientes/table"
+          hx-trigger="change"
+          hx-target="#clientes-tabla"
+          hx-include="#clientes-q,#clientes-size">
+    <option value="10">10</option>
+    <option value="20" selected>20</option>
+    <option value="50">50</option>
+  </select>
+  <button class="btn"
+          hx-get="/app/clientes/form/new"
+          hx-target="#clientes-form"
+          hx-swap="innerHTML">Nuevo</button>
+</div>
+
+<div id="clientes-form"></div>
+
+<div id="clientes-tabla" hx-get="/app/clientes/table" hx-trigger="load">
+  Cargando…
+</div>
+{% endblock %}

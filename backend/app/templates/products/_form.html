@@ -17,12 +17,6 @@
   <label>Stock
     <input type="number" name="stock" value="{{ producto.stock }}" min="0" required>
   </label>
-  <label>Activo
-    <select name="is_active">
-      <option value="true"  {{ 'selected' if producto.is_active else '' }}>Sí</option>
-      <option value="false" {{ '' if producto.is_active else 'selected' }}>No</option>
-    </select>
-  </label>
 
   <div>
     <button class="btn" type="submit">{{ 'Crear' if not producto.id else 'Guardar' }}</button>

@@ -29,7 +29,7 @@
     <nav class="navbar">
       <a class="btn" href="/app/dashboard">Dashboard</a>
       {% if features.get('productos', True) %}<a class="btn" href="/app/productos">Productos</a>{% endif %}
-      {% if features.get('clientes', True) %}<span class="badge">Clientes (próx)</span>{% endif %}
+      {% if features.get('clientes', True) %}<a class="btn" href="/app/clientes">Clientes</a>{% endif %}
       {% if features.get('proveedores', True) %}<span class="badge">Proveedores (próx)</span>{% endif %}
       <span class="right muted">Usuario: {{ user or "—" }}</span>
       <a class="btn" href="/app/logout">Salir</a>

@@ -78,6 +78,41 @@ class ApiClient:
             r.raise_for_status()
             return r.content
 
+    async def _map_producto_payload(self, base: Dict[str, Any], schema_hint: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+        nombre = base.get("nombre")
+        precio = base.get("precio")
+        stock = base.get("stock")
+        is_active = base.get("is_active")
+
+        payload_es: Dict[str, Any] = {}
+        payload_en: Dict[str, Any] = {}
+
+        if nombre is not None:
+            payload_es["nombre"] = nombre
+            payload_en["name"] = nombre
+        if precio is not None:
+            payload_es["precio"] = precio
+            payload_en["price"] = precio
+        if stock is not None:
+            payload_es["stock"] = stock
+            payload_en["stock"] = stock
+        if is_active is not None:
+            payload_es["is_active"] = is_active
+            payload_es.setdefault("activo", is_active)
+            payload_en["is_active"] = is_active
+
+        if schema_hint:
+            keys = set(schema_hint.keys())
+            if {"nombre", "precio", "stock"} & keys:
+                return payload_es or payload_en
+            if {"name", "price", "stock"} & keys:
+                return payload_en or payload_es
+
+        merged = payload_es.copy()
+        for k, v in payload_en.items():
+            merged.setdefault(k, v)
+        return merged
+
     async def get_producto(self, pid: int) -> Dict[str, Any]:
         url = f"{self.base_url}/productos/{pid}"
         async with httpx.AsyncClient() as client:
@@ -86,16 +121,43 @@ class ApiClient:
             return r.json()
 
     async def create_producto(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        schema_hint: Optional[Dict[str, Any]] = None
+        try:
+            sample = await self.list_productos(page=1, size=1)
+            items = sample.get("items") or []
+            if items:
+                schema_hint = items[0]
+        except Exception:
+            pass
+
+        payload = await self._map_producto_payload(data, schema_hint)
         url = f"{self.base_url}/productos"
         async with httpx.AsyncClient() as client:
-            r = await client.post(url, json=data, headers=self._headers(), timeout=30)
+            r = await client.post(url, json=payload, headers=self._headers(), timeout=30)
+            if r.status_code >= 400:
+                alt = await self._map_producto_payload(data, {"name": ""})
+                r = await client.post(url, json=alt, headers=self._headers(), timeout=30)
             r.raise_for_status()
             return r.json()
 
     async def update_producto(self, pid: int, data: Dict[str, Any]) -> Dict[str, Any]:
+        schema_hint: Optional[Dict[str, Any]] = None
+        try:
+            schema_hint = await self.get_producto(pid)
+        except Exception:
+            pass
+
+        payload = await self._map_producto_payload(data, schema_hint)
         url = f"{self.base_url}/productos/{pid}"
         async with httpx.AsyncClient() as client:
-            r = await client.put(url, json=data, headers=self._headers(), timeout=30)
+            r = await client.put(url, json=payload, headers=self._headers(), timeout=30)
+            if r.status_code in (400, 405, 415, 422):
+                r = await client.patch(url, json=payload, headers=self._headers(), timeout=30)
+            if r.status_code >= 400:
+                alt = await self._map_producto_payload(data, {"name": "" if "nombre" in payload else "nombre"})
+                r = await client.put(url, json=alt, headers=self._headers(), timeout=30)
+                if r.status_code in (400, 405, 415, 422):
+                    r = await client.patch(url, json=alt, headers=self._headers(), timeout=30)
             r.raise_for_status()
             return r.json()
 
@@ -104,5 +166,99 @@ class ApiClient:
         payload = {"is_active": (not is_active)}
         async with httpx.AsyncClient() as client:
             r = await client.patch(url, json=payload, headers=self._headers(), timeout=30)
+            r.raise_for_status()
+            return r.json()
+
+    # --- Clientes ---
+
+    async def list_clientes(self, q: str = "", page: int = 1, size: int = 20) -> Dict[str, Any]:
+        params: Dict[str, Any] = {"page": page, "size": size}
+        if q:
+            params["q"] = q
+        url = f"{self.base_url}/clientes"
+        async with httpx.AsyncClient() as client:
+            r = await client.get(url, params=params, headers=self._headers(), timeout=30)
+            r.raise_for_status()
+            return r.json()
+
+    async def get_cliente(self, cid: int) -> Dict[str, Any]:
+        url = f"{self.base_url}/clientes/{cid}"
+        async with httpx.AsyncClient() as client:
+            r = await client.get(url, headers=self._headers(), timeout=30)
+            r.raise_for_status()
+            return r.json()
+
+    async def _map_cliente_payload(self, base: Dict[str, Any], schema_hint: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+        nombre = base.get("nombre")
+        email = base.get("email")
+        telefono = base.get("telefono")
+        cuit = base.get("cuit")
+
+        es: Dict[str, Any] = {}
+        en: Dict[str, Any] = {}
+
+        if nombre is not None:
+            es["nombre"] = nombre
+            en["name"] = nombre
+        if email is not None:
+            es["email"] = email
+            en["email"] = email
+        if telefono is not None:
+            es["telefono"] = telefono
+            en["phone"] = telefono
+        if cuit is not None:
+            es["cuit"] = cuit
+            en["tax_id"] = cuit
+
+        if schema_hint:
+            keys = set(schema_hint.keys())
+            if {"nombre", "telefono", "email"} & keys:
+                return es or en
+            if {"name", "phone", "email"} & keys:
+                return en or es
+
+        merged = es.copy()
+        for k, v in en.items():
+            merged.setdefault(k, v)
+        return merged
+
+    async def create_cliente(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        hint: Optional[Dict[str, Any]] = None
+        try:
+            sample = await self.list_clientes(page=1, size=1)
+            items = sample.get("items") or []
+            if items:
+                hint = items[0]
+        except Exception:
+            pass
+
+        payload = await self._map_cliente_payload(data, hint)
+        url = f"{self.base_url}/clientes"
+        async with httpx.AsyncClient() as client:
+            r = await client.post(url, json=payload, headers=self._headers(), timeout=30)
+            if r.status_code >= 400:
+                alt = await self._map_cliente_payload(data, {"name": ""})
+                r = await client.post(url, json=alt, headers=self._headers(), timeout=30)
+            r.raise_for_status()
+            return r.json()
+
+    async def update_cliente(self, cid: int, data: Dict[str, Any]) -> Dict[str, Any]:
+        hint: Optional[Dict[str, Any]] = None
+        try:
+            hint = await self.get_cliente(cid)
+        except Exception:
+            pass
+
+        payload = await self._map_cliente_payload(data, hint)
+        url = f"{self.base_url}/clientes/{cid}"
+        async with httpx.AsyncClient() as client:
+            r = await client.put(url, json=payload, headers=self._headers(), timeout=30)
+            if r.status_code in (400, 405, 415, 422):
+                r = await client.patch(url, json=payload, headers=self._headers(), timeout=30)
+            if r.status_code >= 400:
+                alt = await self._map_cliente_payload(data, {"name": "" if "nombre" in payload else "nombre"})
+                r = await client.put(url, json=alt, headers=self._headers(), timeout=30)
+                if r.status_code in (400, 405, 415, 422):
+                    r = await client.patch(url, json=alt, headers=self._headers(), timeout=30)
             r.raise_for_status()
             return r.json()
