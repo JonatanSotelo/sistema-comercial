@@ -216,33 +216,26 @@ class ApiClient:
         telefono = base.get("telefono")
         cuit = base.get("cuit")
 
-        es: Dict[str, Any] = {}
-        en: Dict[str, Any] = {}
+        payload: Dict[str, Any] = {}
+        keys = set(schema_hint.keys()) if schema_hint else set()
 
         if nombre is not None:
-            es["nombre"] = nombre
-            en["name"] = nombre
+            if "nombre" in keys:
+                payload["nombre"] = nombre
+            elif "name" in keys:
+                payload["name"] = nombre
+            else:
+                payload["nombre"] = nombre
         if email is not None:
-            es["email"] = email
-            en["email"] = email
+            payload["email"] = email
         if telefono is not None:
-            es["telefono"] = telefono
-            en["phone"] = telefono
+            tel_key = next((k for k in ("telefono", "phone", "phone_number", "telefono_movil") if k in keys), "telefono")
+            payload[tel_key] = telefono
         if cuit is not None:
-            es["cuit"] = cuit
-            en["tax_id"] = cuit
+            cuit_key = next((k for k in ("cuit", "tax_id", "dni", "documento", "id_number", "national_id", "cuil") if k in keys), "cuit")
+            payload[cuit_key] = cuit
 
-        if schema_hint:
-            keys = set(schema_hint.keys())
-            if {"nombre", "telefono", "email"} & keys:
-                return es or en
-            if {"name", "phone", "email"} & keys:
-                return en or es
-
-        merged = es.copy()
-        for k, v in en.items():
-            merged.setdefault(k, v)
-        return merged
+        return payload
 
     async def create_cliente(self, data: Dict[str, Any]) -> Dict[str, Any]:
         hint: Optional[Dict[str, Any]] = None

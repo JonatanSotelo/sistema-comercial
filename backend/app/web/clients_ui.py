@@ -1,3 +1,5 @@
+import re
+
 from fastapi import APIRouter, Request, Query, HTTPException, Form
 from fastapi.responses import StreamingResponse
 from fastapi.templating import Jinja2Templates
@@ -8,11 +10,11 @@ templates = Jinja2Templates(directory="app/templates")
 router = APIRouter()
 
 
-def _clean_phone(value: str | None) -> str | None:
-    if value is None:
+def _digits(value: str | None) -> str | None:
+    if not value:
         return None
-    digits = "".join(ch for ch in value if ch.isdigit())
-    return digits or None
+    cleaned = re.sub(r"\D+", "", value)
+    return cleaned or None
 
 
 def _validate_email(value: str | None) -> bool:
@@ -123,15 +125,20 @@ async def clientes_create(
     telefono: str = Form(""),
     cuit: str = Form(""),
 ):
-    if not nombre.strip():
+    nombre_ok = nombre.strip()
+    email_ok = email.strip() or None
+    tel_ok = _digits(telefono)
+    cuit_ok = _digits(cuit)
+
+    if not nombre_ok:
         cliente = {"id": None, "nombre": nombre, "email": email, "telefono": telefono, "cuit": cuit}
         return templates.TemplateResponse(
             "clients/_form.html",
-            {"request": request, "cliente": cliente, "error": "Nombre requerido."},
+            {"request": request, "cliente": cliente, "error": "Nombre es obligatorio."},
             headers={"HX-Retarget": "#form-container", "HX-Reswap": "innerHTML"},
             status_code=400,
         )
-    if not _validate_email(email):
+    if not _validate_email(email_ok):
         cliente = {"id": None, "nombre": nombre, "email": email, "telefono": telefono, "cuit": cuit}
         return templates.TemplateResponse(
             "clients/_form.html",
@@ -140,21 +147,22 @@ async def clientes_create(
             status_code=400,
         )
 
-    api = get_api(request)
-    payload = {
-        "nombre": nombre.strip(),
-        "email": email.strip() or None,
-        "telefono": _clean_phone(telefono),
-        "cuit": cuit.strip() or None,
-    }
+    data = {"nombre": nombre_ok}
+    if email_ok:
+        data["email"] = email_ok
+    if tel_ok:
+        data["telefono"] = tel_ok
+    if cuit_ok:
+        data["cuit"] = cuit_ok
 
+    api = get_api(request)
     try:
-        await api.create_cliente(payload)
+        await api.create_cliente(data)
     except Exception:
         cliente = {"id": None, "nombre": nombre, "email": email, "telefono": telefono, "cuit": cuit}
         return templates.TemplateResponse(
             "clients/_form.html",
-            {"request": request, "cliente": cliente, "error": "No se pudo crear. Verifica datos."},
+            {"request": request, "cliente": cliente, "error": "No se pudo crear. Verifica los datos."},
             headers={"HX-Retarget": "#form-container", "HX-Reswap": "innerHTML"},
             status_code=400,
         )
@@ -171,15 +179,20 @@ async def clientes_update(
     telefono: str = Form(""),
     cuit: str = Form(""),
 ):
-    if not nombre.strip():
+    nombre_ok = nombre.strip()
+    email_ok = email.strip() or None
+    tel_ok = _digits(telefono)
+    cuit_ok = _digits(cuit)
+
+    if not nombre_ok:
         cliente = {"id": cid, "nombre": nombre, "email": email, "telefono": telefono, "cuit": cuit}
         return templates.TemplateResponse(
             "clients/_form.html",
-            {"request": request, "cliente": cliente, "error": "Nombre requerido."},
+            {"request": request, "cliente": cliente, "error": "Nombre es obligatorio."},
             headers={"HX-Retarget": "#form-container", "HX-Reswap": "innerHTML"},
             status_code=400,
         )
-    if not _validate_email(email):
+    if not _validate_email(email_ok):
         cliente = {"id": cid, "nombre": nombre, "email": email, "telefono": telefono, "cuit": cuit}
         return templates.TemplateResponse(
             "clients/_form.html",
@@ -188,16 +201,17 @@ async def clientes_update(
             status_code=400,
         )
 
-    api = get_api(request)
-    payload = {
-        "nombre": nombre.strip(),
-        "email": email.strip() or None,
-        "telefono": _clean_phone(telefono),
-        "cuit": cuit.strip() or None,
-    }
+    data = {"nombre": nombre_ok}
+    if email_ok:
+        data["email"] = email_ok
+    if tel_ok:
+        data["telefono"] = tel_ok
+    if cuit_ok:
+        data["cuit"] = cuit_ok
 
+    api = get_api(request)
     try:
-        await api.update_cliente(cid, payload)
+        await api.update_cliente(cid, data)
     except Exception:
         cliente = {"id": cid, "nombre": nombre, "email": email, "telefono": telefono, "cuit": cuit}
         return templates.TemplateResponse(
