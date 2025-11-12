@@ -179,7 +179,29 @@ class ApiClient:
         async with httpx.AsyncClient() as client:
             r = await client.get(url, params=params, headers=self._headers(), timeout=30)
             r.raise_for_status()
-            return r.json()
+            data = r.json()
+
+            if isinstance(data, list):
+                total = len(data)
+                start = max((page - 1) * size, 0)
+                end = start + size
+                items = data[start:end]
+                return {"items": items, "total": total, "page": page, "size": size}
+
+            if isinstance(data, dict):
+                if "items" in data:
+                    return data
+                items = data.get("results") or data.get("data") or []
+                if isinstance(items, list):
+                    total = data.get("total", len(items))
+                    return {
+                        "items": items,
+                        "total": total,
+                        "page": data.get("page", page),
+                        "size": data.get("size", size),
+                    }
+
+        return {"items": [], "total": 0, "page": page, "size": size}
 
     async def get_cliente(self, cid: int) -> Dict[str, Any]:
         url = f"{self.base_url}/clientes/{cid}"

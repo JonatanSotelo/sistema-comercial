@@ -47,4 +47,6 @@
   </div>
 </div>
 
-<div id="clientes-form" hx-swap-oob="true"></div>
+{% if oob_clear %}
+  <div id="clientes-form" hx-swap-oob="true"></div>
+{% endif %}
