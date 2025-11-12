@@ -1,7 +1,7 @@
 import re
+from typing import Any, Dict
 
 from fastapi import APIRouter, Request, Query, HTTPException, Form
-from fastapi.responses import StreamingResponse
 from fastapi.templating import Jinja2Templates
 
 from .deps import get_api
@@ -21,6 +21,23 @@ def _validate_email(value: str | None) -> bool:
     if not value:
         return True
     return "@" in value
+
+
+_CUIT_KEYS = ("cuit", "tax_id", "dni", "documento", "id_number", "national_id", "cuil")
+_PHONE_KEYS = ("telefono", "phone", "phone_number", "telefono_movil")
+
+
+def _hydrate_cliente(raw: Dict[str, Any] | None) -> Dict[str, Any]:
+    raw = raw or {}
+    telefono = next((raw.get(k) for k in _PHONE_KEYS if raw.get(k)), "")
+    cuit = next((raw.get(k) for k in _CUIT_KEYS if raw.get(k)), "")
+    return {
+        "id": raw.get("id"),
+        "nombre": raw.get("nombre") or raw.get("name") or "",
+        "email": raw.get("email") or raw.get("correo") or "",
+        "telefono": telefono or "",
+        "cuit": cuit or "",
+    }
 
 
 @router.get("/clientes")
@@ -82,7 +99,7 @@ async def clientes_table(
 
 @router.get("/clientes/form/new")
 async def clientes_form_new(request: Request):
-    cliente = {"id": None, "nombre": "", "email": "", "telefono": "", "cuit": ""}
+    cliente = _hydrate_cliente({"id": None})
     return templates.TemplateResponse(
         "clients/_form.html",
         {
@@ -100,13 +117,7 @@ async def clientes_form_edit(request: Request, cid: int):
         data = await api.get_cliente(cid)
     except Exception:
         raise HTTPException(status_code=404, detail="Cliente no encontrado")
-    cliente = {
-        "id": data.get("id"),
-        "nombre": data.get("nombre") or data.get("name") or "",
-        "email": data.get("email") or data.get("correo") or "",
-        "telefono": data.get("telefono") or data.get("phone") or "",
-        "cuit": data.get("cuit") or data.get("tax_id") or "",
-    }
+    cliente = _hydrate_cliente(data)
     return templates.TemplateResponse(
         "clients/_form.html",
         {
@@ -131,19 +142,31 @@ async def clientes_create(
     cuit_ok = _digits(cuit)
 
     if not nombre_ok:
-        cliente = {"id": None, "nombre": nombre, "email": email, "telefono": telefono, "cuit": cuit}
+        cliente = _hydrate_cliente({
+            "id": None,
+            "nombre": nombre,
+            "email": email,
+            "telefono": telefono,
+            "cuit": cuit,
+        })
         return templates.TemplateResponse(
             "clients/_form.html",
             {"request": request, "cliente": cliente, "error": "Nombre es obligatorio."},
-            headers={"HX-Retarget": "#form-container", "HX-Reswap": "innerHTML"},
+            headers={"HX-Retarget": "#clientes-form", "HX-Reswap": "innerHTML"},
             status_code=400,
         )
     if not _validate_email(email_ok):
-        cliente = {"id": None, "nombre": nombre, "email": email, "telefono": telefono, "cuit": cuit}
+        cliente = _hydrate_cliente({
+            "id": None,
+            "nombre": nombre,
+            "email": email,
+            "telefono": telefono,
+            "cuit": cuit,
+        })
         return templates.TemplateResponse(
             "clients/_form.html",
             {"request": request, "cliente": cliente, "error": "Email inválido."},
-            headers={"HX-Retarget": "#form-container", "HX-Reswap": "innerHTML"},
+            headers={"HX-Retarget": "#clientes-form", "HX-Reswap": "innerHTML"},
             status_code=400,
         )
 
@@ -159,11 +182,17 @@ async def clientes_create(
     try:
         await api.create_cliente(data)
     except Exception:
-        cliente = {"id": None, "nombre": nombre, "email": email, "telefono": telefono, "cuit": cuit}
+        cliente = _hydrate_cliente({
+            "id": None,
+            "nombre": nombre,
+            "email": email,
+            "telefono": telefono,
+            "cuit": cuit,
+        })
         return templates.TemplateResponse(
             "clients/_form.html",
             {"request": request, "cliente": cliente, "error": "No se pudo crear. Verifica los datos."},
-            headers={"HX-Retarget": "#form-container", "HX-Reswap": "innerHTML"},
+            headers={"HX-Retarget": "#clientes-form", "HX-Reswap": "innerHTML"},
             status_code=400,
         )
 
@@ -185,19 +214,31 @@ async def clientes_update(
     cuit_ok = _digits(cuit)
 
     if not nombre_ok:
-        cliente = {"id": cid, "nombre": nombre, "email": email, "telefono": telefono, "cuit": cuit}
+        cliente = _hydrate_cliente({
+            "id": cid,
+            "nombre": nombre,
+            "email": email,
+            "telefono": telefono,
+            "cuit": cuit,
+        })
         return templates.TemplateResponse(
             "clients/_form.html",
             {"request": request, "cliente": cliente, "error": "Nombre es obligatorio."},
-            headers={"HX-Retarget": "#form-container", "HX-Reswap": "innerHTML"},
+            headers={"HX-Retarget": "#clientes-form", "HX-Reswap": "innerHTML"},
             status_code=400,
         )
     if not _validate_email(email_ok):
-        cliente = {"id": cid, "nombre": nombre, "email": email, "telefono": telefono, "cuit": cuit}
+        cliente = _hydrate_cliente({
+            "id": cid,
+            "nombre": nombre,
+            "email": email,
+            "telefono": telefono,
+            "cuit": cuit,
+        })
         return templates.TemplateResponse(
             "clients/_form.html",
             {"request": request, "cliente": cliente, "error": "Email inválido."},
-            headers={"HX-Retarget": "#form-container", "HX-Reswap": "innerHTML"},
+            headers={"HX-Retarget": "#clientes-form", "HX-Reswap": "innerHTML"},
             status_code=400,
         )
 
@@ -213,11 +254,17 @@ async def clientes_update(
     try:
         await api.update_cliente(cid, data)
     except Exception:
-        cliente = {"id": cid, "nombre": nombre, "email": email, "telefono": telefono, "cuit": cuit}
+        cliente = _hydrate_cliente({
+            "id": cid,
+            "nombre": nombre,
+            "email": email,
+            "telefono": telefono,
+            "cuit": cuit,
+        })
         return templates.TemplateResponse(
             "clients/_form.html",
             {"request": request, "cliente": cliente, "error": "No se pudo actualizar."},
-            headers={"HX-Retarget": "#form-container", "HX-Reswap": "innerHTML"},
+            headers={"HX-Retarget": "#clientes-form", "HX-Reswap": "innerHTML"},
             status_code=400,
         )
 

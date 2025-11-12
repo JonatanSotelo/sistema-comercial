@@ -1,6 +1,6 @@
 
 import os
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 import httpx
 
 API_BASE_URL = os.environ.get("API_BASE_URL", "http://localhost:8000")
@@ -210,6 +210,9 @@ class ApiClient:
             r.raise_for_status()
             return r.json()
 
+    _CUIT_KEYS: tuple[str, ...] = ("cuit", "tax_id", "dni", "documento", "id_number", "national_id", "cuil")
+    _PHONE_KEYS: tuple[str, ...] = ("telefono", "phone", "phone_number", "telefono_movil")
+
     async def _map_cliente_payload(self, base: Dict[str, Any], schema_hint: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         nombre = base.get("nombre")
         email = base.get("email")
@@ -217,25 +220,43 @@ class ApiClient:
         cuit = base.get("cuit")
 
         payload: Dict[str, Any] = {}
-        keys = set(schema_hint.keys()) if schema_hint else set()
+        hint_keys = set(schema_hint.keys()) if schema_hint else set()
 
         if nombre is not None:
-            if "nombre" in keys:
+            if "nombre" in hint_keys:
                 payload["nombre"] = nombre
-            elif "name" in keys:
+            elif "name" in hint_keys:
                 payload["name"] = nombre
             else:
                 payload["nombre"] = nombre
+
         if email is not None:
             payload["email"] = email
+
         if telefono is not None:
-            tel_key = next((k for k in ("telefono", "phone", "phone_number", "telefono_movil") if k in keys), "telefono")
-            payload[tel_key] = telefono
+            tel_key = next((k for k in self._PHONE_KEYS if k in hint_keys), None)
+            payload[tel_key or "telefono"] = telefono
+
         if cuit is not None:
-            cuit_key = next((k for k in ("cuit", "tax_id", "dni", "documento", "id_number", "national_id", "cuil") if k in keys), "cuit")
-            payload[cuit_key] = cuit
+            cuit_key = next((k for k in self._CUIT_KEYS if k in hint_keys), None)
+            payload[cuit_key or "cuit"] = cuit
 
         return payload
+
+    def _cuit_alias_variants(self, value: str) -> List[Dict[str, Any]]:
+        return [{k: value} for k in self._CUIT_KEYS]
+
+    async def _get_cliente_cuit_value(self, cid: int) -> Optional[str]:
+        try:
+            obj = await self.get_cliente(cid)
+        except Exception:
+            return None
+
+        for key in self._CUIT_KEYS:
+            val = obj.get(key)
+            if isinstance(val, str) and val.strip():
+                return val
+        return None
 
     async def create_cliente(self, data: Dict[str, Any]) -> Dict[str, Any]:
         hint: Optional[Dict[str, Any]] = None
@@ -249,13 +270,41 @@ class ApiClient:
 
         payload = await self._map_cliente_payload(data, hint)
         url = f"{self.base_url}/clientes"
+
         async with httpx.AsyncClient() as client:
-            r = await client.post(url, json=payload, headers=self._headers(), timeout=30)
-            if r.status_code >= 400:
-                alt = await self._map_cliente_payload(data, {"name": ""})
-                r = await client.post(url, json=alt, headers=self._headers(), timeout=30)
-            r.raise_for_status()
-            return r.json()
+            response = await client.post(url, json=payload, headers=self._headers(), timeout=30)
+
+            if response.status_code >= 400 and data.get("cuit"):
+                for variant in self._cuit_alias_variants(data["cuit"]):
+                    alt = payload.copy()
+                    for key in self._CUIT_KEYS:
+                        alt.pop(key, None)
+                    alt.update(variant)
+                    response = await client.post(url, json=alt, headers=self._headers(), timeout=30)
+                    if response.status_code < 400:
+                        break
+
+            response.raise_for_status()
+            created = response.json()
+
+            cid = created.get("id")
+            if cid and data.get("cuit"):
+                saved_value = await self._get_cliente_cuit_value(cid)
+                if saved_value != data["cuit"]:
+                    for variant in self._cuit_alias_variants(data["cuit"]):
+                        alt = payload.copy()
+                        for key in self._CUIT_KEYS:
+                            alt.pop(key, None)
+                        alt.update(variant)
+                        follow = await client.put(f"{url}/{cid}", json=alt, headers=self._headers(), timeout=30)
+                        if follow.status_code in (400, 405, 415, 422):
+                            follow = await client.patch(f"{url}/{cid}", json=alt, headers=self._headers(), timeout=30)
+                        if follow.status_code < 400:
+                            saved_value = await self._get_cliente_cuit_value(cid)
+                            if saved_value == data["cuit"]:
+                                break
+
+            return created
 
     async def update_cliente(self, cid: int, data: Dict[str, Any]) -> Dict[str, Any]:
         hint: Optional[Dict[str, Any]] = None
@@ -266,14 +315,29 @@ class ApiClient:
 
         payload = await self._map_cliente_payload(data, hint)
         url = f"{self.base_url}/clientes/{cid}"
+
         async with httpx.AsyncClient() as client:
-            r = await client.put(url, json=payload, headers=self._headers(), timeout=30)
-            if r.status_code in (400, 405, 415, 422):
-                r = await client.patch(url, json=payload, headers=self._headers(), timeout=30)
-            if r.status_code >= 400:
-                alt = await self._map_cliente_payload(data, {"name": "" if "nombre" in payload else "nombre"})
-                r = await client.put(url, json=alt, headers=self._headers(), timeout=30)
-                if r.status_code in (400, 405, 415, 422):
-                    r = await client.patch(url, json=alt, headers=self._headers(), timeout=30)
-            r.raise_for_status()
-            return r.json()
+            response = await client.put(url, json=payload, headers=self._headers(), timeout=30)
+            if response.status_code in (400, 405, 415, 422):
+                response = await client.patch(url, json=payload, headers=self._headers(), timeout=30)
+
+            if data.get("cuit"):
+                saved_value = await self._get_cliente_cuit_value(cid)
+                if saved_value != data["cuit"]:
+                    for variant in self._cuit_alias_variants(data["cuit"]):
+                        alt = payload.copy()
+                        for key in self._CUIT_KEYS:
+                            alt.pop(key, None)
+                        alt.update(variant)
+
+                        response = await client.put(url, json=alt, headers=self._headers(), timeout=30)
+                        if response.status_code in (400, 405, 415, 422):
+                            response = await client.patch(url, json=alt, headers=self._headers(), timeout=30)
+
+                        if response.status_code < 400:
+                            saved_value = await self._get_cliente_cuit_value(cid)
+                            if saved_value == data["cuit"]:
+                                break
+
+            response.raise_for_status()
+            return response.json()

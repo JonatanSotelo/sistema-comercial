@@ -16,8 +16,8 @@
         <td>{{ c.get("id") }}</td>
         <td>{{ c.get("nombre") or c.get("name") }}</td>
         <td>{{ c.get("email") }}</td>
-        <td>{{ c.get("telefono") or c.get("phone") }}</td>
-        <td>{{ c.get("cuit") or c.get("tax_id") }}</td>
+        <td>{{ c.get("telefono") or c.get("phone") or c.get("phone_number") }}</td>
+        <td>{{ c.get("cuit") or c.get("tax_id") or c.get("dni") or c.get("documento") or c.get("id_number") or c.get("national_id") or c.get("cuil") }}</td>
         <td>
           <button class="btn"
                   hx-get="/app/clientes/form/{{ c.get('id') }}"
