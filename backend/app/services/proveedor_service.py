@@ -3,7 +3,7 @@ from app.models.proveedor_model import Proveedor
 from app.schemas.proveedor_schema import ProveedorCreate, ProveedorUpdate
 
 def crear_proveedor(db: Session, data: ProveedorCreate) -> Proveedor:
-    p = Proveedor(**data.model_dump())
+    p = Proveedor(**data.model_dump(exclude_none=True))
     db.add(p)
     db.commit()
     db.refresh(p)

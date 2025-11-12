@@ -8,6 +8,9 @@ class Proveedor(Base):
     id = Column(Integer, primary_key=True, index=True)
     nombre = Column(String, nullable=False, index=True)
     email = Column(String, nullable=True)
+    telefono = Column(String, nullable=True)
+    cuit = Column(String, nullable=True, index=True)
+    direccion = Column(String, nullable=True)
 
     # Relación esperada por Compra (Compra.back_populates="proveedor")
     # No crea columnas nuevas; usa la FK en compras.proveedor_id

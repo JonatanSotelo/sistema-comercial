@@ -27,7 +27,11 @@ def apply_search(queryset, search: Optional[str]):
     if search:
         like = f"%{search}%"
         queryset = queryset.filter(
-            (Proveedor.nombre.ilike(like)) | (Proveedor.email.ilike(like))
+            (Proveedor.nombre.ilike(like))
+            | (Proveedor.email.ilike(like))
+            | (Proveedor.telefono.ilike(like))
+            | (Proveedor.cuit.ilike(like))
+            | (Proveedor.direccion.ilike(like))
         )
     return queryset
 
@@ -46,6 +50,12 @@ def apply_sort(queryset, sort: Optional[str]):
             order_clauses.append(direction(Proveedor.email))
         elif col == "id":
             order_clauses.append(direction(Proveedor.id))
+        elif col == "telefono":
+            order_clauses.append(direction(Proveedor.telefono))
+        elif col == "cuit":
+            order_clauses.append(direction(Proveedor.cuit))
+        elif col == "direccion":
+            order_clauses.append(direction(Proveedor.direccion))
     if not order_clauses:
         order_clauses = [asc(Proveedor.nombre), asc(Proveedor.id)]
     return queryset.order_by(*order_clauses)
@@ -159,10 +169,10 @@ def export_proveedores(
     wb = Workbook()
     ws = wb.active
     ws.title = "Proveedores"
-    ws.append(["ID", "Nombre", "Email"])
+    ws.append(["ID", "Nombre", "Email", "Teléfono", "CUIT", "Dirección"])
 
     for r in rows:
-        ws.append([r.id, r.nombre, r.email or ""])
+        ws.append([r.id, r.nombre, r.email or "", r.telefono or "", r.cuit or "", r.direccion or ""])
 
     buffer = BytesIO()
     wb.save(buffer)
