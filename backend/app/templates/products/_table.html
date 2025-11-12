@@ -7,6 +7,7 @@
       <th>Precio</th>
       <th>Stock</th>
       <th>Estado</th>
+      <th>Acciones</th>
     </tr>
   </thead>
   <tbody>
@@ -17,10 +18,26 @@
       <td>{{ p.get("precio") if p.get("precio") is not none else p.get("price") }}</td>
       <td>{{ p.get("stock") }}</td>
       <td>{{ "Activo" if p.get("is_active", True) else "Inactivo" }}</td>
+      <td>
+        <button class="btn"
+                hx-get="/app/productos/form/{{ p.get('id') }}"
+                hx-target="#form-container"
+                hx-swap="innerHTML">Editar</button>
+
+        <form style="display:inline"
+              hx-post="/app/productos/toggle/{{ p.get('id') }}"
+              hx-target="#tabla"
+              hx-swap="outerHTML">
+          <input type="hidden" name="current_active" value="{{ 'true' if p.get('is_active', True) else 'false' }}">
+          <button class="btn" type="submit">
+            {{ 'Desactivar' if p.get('is_active', True) else 'Activar' }}
+          </button>
+        </form>
+      </td>
     </tr>
   {% endfor %}
   {% if not items %}
-    <tr><td colspan="5" class="muted">Sin resultados</td></tr>
+    <tr><td colspan="6" class="muted">Sin resultados</td></tr>
   {% endif %}
   </tbody>
 </table>

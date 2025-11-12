@@ -1,0 +1,39 @@
+<div class="flash" style="margin-top:.5rem">
+  <strong>{{ 'Nuevo producto' if not producto.id else 'Editar producto' }}</strong>
+</div>
+
+<form
+  hx-post="{{ '/app/productos/create' if not producto.id else ('/app/productos/update/' ~ producto.id) }}"
+  hx-target="#tabla"
+  hx-swap="outerHTML"
+  style="display:grid;grid-template-columns:repeat(2,1fr);gap:.75rem;max-width:700px;margin:.5rem 0 1rem 0"
+>
+  <label>Nombre
+    <input type="text" name="nombre" value="{{ producto.nombre }}" required>
+  </label>
+  <label>Precio
+    <input type="number" step="0.01" name="precio" value="{{ producto.precio }}" required>
+  </label>
+  <label>Stock
+    <input type="number" name="stock" value="{{ producto.stock }}" min="0" required>
+  </label>
+  <label>Activo
+    <select name="is_active">
+      <option value="true"  {{ 'selected' if producto.is_active else '' }}>Sí</option>
+      <option value="false" {{ '' if producto.is_active else 'selected' }}>No</option>
+    </select>
+  </label>
+
+  <div>
+    <button class="btn" type="submit">{{ 'Crear' if not producto.id else 'Guardar' }}</button>
+  </div>
+  <div>
+    <button class="btn" type="button"
+            onclick="document.getElementById('form-container').innerHTML='';">Cancelar</button>
+  </div>
+
+  {% if error %}
+  <div class="flash error" style="grid-column:1/-1">{{ error }}</div>
+  {% endif %}
+</form>
+

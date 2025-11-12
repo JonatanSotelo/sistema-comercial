@@ -19,9 +19,15 @@
     <option value="20" selected>20</option>
     <option value="50">50</option>
   </select>
+  <button class="btn"
+          hx-get="/app/productos/form/new"
+          hx-target="#form-container"
+          hx-swap="innerHTML">Nuevo</button>
   <a class="btn" href="/app/productos/export?format=csv">Export CSV</a>
   <a class="btn" href="/app/productos/export?format=xlsx">Export XLSX</a>
 </div>
+
+<div id="form-container"></div>
 
 <div id="tabla" hx-get="/app/productos/table" hx-trigger="load">
   Cargando…

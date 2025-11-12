@@ -50,3 +50,32 @@ class ApiClient:
             r = await client.get(url, params=params, headers=self._headers(), timeout=None)
             r.raise_for_status()
             return r.content
+
+    async def get_producto(self, pid: int) -> Dict[str, Any]:
+        url = f"{self.base_url}/productos/{pid}"
+        async with httpx.AsyncClient() as client:
+            r = await client.get(url, headers=self._headers(), timeout=30)
+            r.raise_for_status()
+            return r.json()
+
+    async def create_producto(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        url = f"{self.base_url}/productos"
+        async with httpx.AsyncClient() as client:
+            r = await client.post(url, json=data, headers=self._headers(), timeout=30)
+            r.raise_for_status()
+            return r.json()
+
+    async def update_producto(self, pid: int, data: Dict[str, Any]) -> Dict[str, Any]:
+        url = f"{self.base_url}/productos/{pid}"
+        async with httpx.AsyncClient() as client:
+            r = await client.put(url, json=data, headers=self._headers(), timeout=30)
+            r.raise_for_status()
+            return r.json()
+
+    async def toggle_producto(self, pid: int, is_active: bool) -> Dict[str, Any]:
+        url = f"{self.base_url}/productos/{pid}"
+        payload = {"is_active": (not is_active)}
+        async with httpx.AsyncClient() as client:
+            r = await client.patch(url, json=payload, headers=self._headers(), timeout=30)
+            r.raise_for_status()
+            return r.json()
