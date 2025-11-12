@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Proveedores</h1>
+
+<div class="search">
+  <input id="proveedores-q" type="search" placeholder="Buscar..." name="q"
+         hx-get="/app/proveedores/table"
+         hx-trigger="keyup changed delay:300ms"
+         hx-target="#tabla"
+         hx-include="#proveedores-q,#proveedores-size">
+  <select id="proveedores-size" name="size"
+          hx-get="/app/proveedores/table"
+          hx-trigger="change"
+          hx-target="#tabla"
+          hx-include="#proveedores-q,#proveedores-size">
+    <option value="10">10</option>
+    <option value="20" selected>20</option>
+    <option value="50">50</option>
+  </select>
+  <button class="btn"
+          hx-get="/app/proveedores/form/new"
+          hx-target="#form-container"
+          hx-swap="innerHTML">Nuevo</button>
+  <a class="btn" href="/app/proveedores/export?format=csv">Export CSV</a>
+  <a class="btn" href="/app/proveedores/export?format=xlsx">Export XLSX</a>
+</div>
+
+<div id="form-container"></div>
+
+<div id="tabla" hx-get="/app/proveedores/table" hx-trigger="load">
+  Cargando…
+</div>
+{% endblock %}

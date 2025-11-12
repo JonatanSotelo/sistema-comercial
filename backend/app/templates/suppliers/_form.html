@@ -1,0 +1,38 @@
+<div class="flash" style="margin-top:.5rem">
+  <strong>{{ 'Nuevo proveedor' if not proveedor.id else 'Editar proveedor' }}</strong>
+</div>
+
+<form
+  hx-post="{{ '/app/proveedores/create' if not proveedor.id else ('/app/proveedores/update/' ~ proveedor.id) }}"
+  hx-target="#tabla"
+  hx-swap="outerHTML"
+  style="display:grid;grid-template-columns:repeat(2,1fr);gap:.75rem;max-width:700px;margin:.5rem 0 1rem 0"
+>
+  <label>Nombre
+    <input type="text" name="nombre" value="{{ proveedor.nombre }}" required>
+  </label>
+  <label>Email
+    <input type="email" name="email" value="{{ proveedor.email }}">
+  </label>
+  <label>Teléfono
+    <input type="text" name="telefono" value="{{ proveedor.telefono }}">
+  </label>
+  <label>CUIT
+    <input type="text" name="cuit" value="{{ proveedor.cuit }}">
+  </label>
+  <label>Dirección
+    <input type="text" name="direccion" value="{{ proveedor.direccion }}">
+  </label>
+
+  <div>
+    <button class="btn" type="submit">{{ 'Crear' if not proveedor.id else 'Guardar' }}</button>
+  </div>
+  <div>
+    <button class="btn" type="button"
+            onclick="document.getElementById('form-container').innerHTML='';">Cancelar</button>
+  </div>
+
+  {% if error %}
+  <div class="flash error" style="grid-column:1/-1">{{ error }}</div>
+  {% endif %}
+</form>
