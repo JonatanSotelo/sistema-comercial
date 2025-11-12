@@ -27,7 +27,9 @@ def apply_search(queryset, search: Optional[str]):
     if search:
         like = f"%{search}%"
         queryset = queryset.filter(
-            (Cliente.nombre.ilike(like)) | (Cliente.email.ilike(like))
+            (Cliente.nombre.ilike(like))
+            | (Cliente.email.ilike(like))
+            | (Cliente.cuit.ilike(like))
         )
     return queryset
 
@@ -46,6 +48,8 @@ def apply_sort(queryset, sort: Optional[str]):
             order_clauses.append(direction(Cliente.email))
         elif col == "id":
             order_clauses.append(direction(Cliente.id))
+        elif col == "cuit":
+            order_clauses.append(direction(Cliente.cuit))
     if not order_clauses:
         order_clauses = [asc(Cliente.nombre), asc(Cliente.id)]
     return queryset.order_by(*order_clauses)
@@ -159,10 +163,10 @@ def export_clientes(
     wb = Workbook()
     ws = wb.active
     ws.title = "Clientes"
-    ws.append(["ID", "Nombre", "Email", "Telefono"])
+    ws.append(["ID", "Nombre", "Email", "Telefono", "CUIT"])
 
     for r in rows:
-        ws.append([r.id, r.nombre, r.email or "", r.telefono or ""])
+        ws.append([r.id, r.nombre, r.email or "", r.telefono or "", r.cuit or ""])
 
     buffer = BytesIO()
     wb.save(buffer)
