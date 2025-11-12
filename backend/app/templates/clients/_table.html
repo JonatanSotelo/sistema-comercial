@@ -1,52 +1,56 @@
-<table class="table">
-  <thead>
-    <tr>
-      <th>ID</th>
-      <th>Nombre</th>
-      <th>Email</th>
-      <th>Teléfono</th>
-      <th>CUIT</th>
-      <th>Acciones</th>
-    </tr>
-  </thead>
-  <tbody>
-  {% for c in items %}
-    <tr>
-      <td>{{ c.get("id") }}</td>
-      <td>{{ c.get("nombre") or c.get("name") }}</td>
-      <td>{{ c.get("email") }}</td>
-      <td>{{ c.get("telefono") or c.get("phone") }}</td>
-      <td>{{ c.get("cuit") or c.get("tax_id") }}</td>
-      <td>
+<div id="clientes-tabla">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Nombre</th>
+        <th>Email</th>
+        <th>Teléfono</th>
+        <th>CUIT</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for c in items %}
+      <tr>
+        <td>{{ c.get("id") }}</td>
+        <td>{{ c.get("nombre") or c.get("name") }}</td>
+        <td>{{ c.get("email") }}</td>
+        <td>{{ c.get("telefono") or c.get("phone") }}</td>
+        <td>{{ c.get("cuit") or c.get("tax_id") }}</td>
+        <td>
+          <button class="btn"
+                  hx-get="/app/clientes/form/{{ c.get('id') }}"
+                  hx-target="#clientes-form"
+                  hx-swap="innerHTML">Editar</button>
+        </td>
+      </tr>
+    {% endfor %}
+    {% if not items %}
+      <tr><td colspan="6" class="muted">Sin resultados</td></tr>
+    {% endif %}
+    </tbody>
+  </table>
+
+  <div class="search">
+    <span class="muted">Total: {{ total }}</span>
+    <div class="right">
+      {% if page > 1 %}
         <button class="btn"
-                hx-get="/app/clientes/form/{{ c.get('id') }}"
-                hx-target="#clientes-form"
-                hx-swap="innerHTML">Editar</button>
-      </td>
-    </tr>
-  {% endfor %}
-  {% if not items %}
-    <tr><td colspan="6" class="muted">Sin resultados</td></tr>
-  {% endif %}
-  </tbody>
-</table>
-
-<div class="search">
-  <span class="muted">Total: {{ total }}</span>
-  <div class="right">
-    {% if page > 1 %}
-      <button class="btn"
-              hx-get="/app/clientes/table?page={{ page-1 }}&size={{ size }}&q={{ q|default('') }}"
-              hx-target="#clientes-tabla">&larr; Anterior</button>
-    {% endif %}
-    {% if (page*size) < total %}
-      <button class="btn"
-              hx-get="/app/clientes/table?page={{ page+1 }}&size={{ size }}&q={{ q|default('') }}"
-              hx-target="#clientes-tabla">Siguiente &rarr;</button>
-    {% endif %}
+                hx-get="/app/clientes/table?page={{ page-1 }}&size={{ size }}&q={{ q|default('') }}"
+                hx-target="#clientes-tabla"
+                hx-swap="outerHTML">&larr; Anterior</button>
+      {% endif %}
+      {% if (page*size) < total %}
+        <button class="btn"
+                hx-get="/app/clientes/table?page={{ page+1 }}&size={{ size }}&q={{ q|default('') }}"
+                hx-target="#clientes-tabla"
+                hx-swap="outerHTML">Siguiente &rarr;</button>
+      {% endif %}
+    </div>
   </div>
-</div>
 
-{% if oob_clear %}
-  <div id="clientes-form" hx-swap-oob="true"></div>
-{% endif %}
+  {% if oob_clear %}
+    <div id="clientes-form" hx-swap-oob="true"></div>
+  {% endif %}
+</div>
