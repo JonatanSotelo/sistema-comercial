@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Request, Response
+from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 from typing import Optional
 
@@ -53,3 +54,35 @@ def eliminar(venta_id: int, db: Session = Depends(get_db)):
     if not ok:
         raise HTTPException(status_code=404, detail="Venta no encontrada")
     return None
+
+
+# ============ REMITOS ============
+
+@router.get("/{venta_id}/remito", response_class=HTMLResponse, dependencies=[Depends(get_current_user)])
+def get_remito_html(venta_id: int, db: Session = Depends(get_db)):
+    """Generar remito HTML imprimible"""
+    from app.services.remito_service import generate_remito_html
+    
+    venta = obtener_venta(db, venta_id)
+    if not venta:
+        raise HTTPException(status_code=404, detail="Venta no encontrada")
+    
+    html = generate_remito_html(venta)
+    return HTMLResponse(content=html)
+
+
+@router.get("/{venta_id}/remito.pdf", response_class=Response, dependencies=[Depends(get_current_user)])
+def get_remito_pdf(venta_id: int, db: Session = Depends(get_db)):
+    """Generar remito PDF con ReportLab"""
+    from app.services.remito_service import generate_remito_pdf
+    
+    venta = obtener_venta(db, venta_id)
+    if not venta:
+        raise HTTPException(status_code=404, detail="Venta no encontrada")
+    
+    pdf_content = generate_remito_pdf(venta)
+    return Response(
+        content=pdf_content,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename=remito_{venta_id:06d}.pdf"}
+    )

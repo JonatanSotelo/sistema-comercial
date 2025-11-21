@@ -52,14 +52,28 @@
         <td style="display:flex;gap:.25rem;flex-wrap:wrap;align-items:center">
           {% set estado = p.get("estado") %}
           
-          <!-- Botón Imprimir (EN_PREPARACION y LISTO) -->
+          <!-- Botón Etiqueta (EN_PREPARACION, LISTO, FACTURADO) -->
+          {% if estado in ["EN_PREPARACION", "LISTO", "FACTURADO"] %}
+            <a class="btn" href="/pedidos/{{ p.get('id') }}/label.pdf" target="_blank" 
+               style="padding:.3rem .5rem;font-size:.85em;text-decoration:none;background:#e1f5fe"
+               title="Etiqueta con QR">🏷️ Etiqueta</a>
+          {% endif %}
+          
+          <!-- Botón Imprimir Packing (EN_PREPARACION y LISTO) -->
           {% if estado in ["EN_PREPARACION", "LISTO"] %}
             <a class="btn" href="/pedidos/{{ p.get('id') }}/packing" target="_blank" 
                style="padding:.3rem .5rem;font-size:.85em;text-decoration:none;background:#e3f2fd"
                title="Imprimir Packing Slip">🖨️</a>
             <a class="btn" href="/pedidos/{{ p.get('id') }}/packing.pdf" target="_blank" 
                style="padding:.3rem .5rem;font-size:.85em;text-decoration:none;background:#fff3e0"
-               title="Descargar PDF">📄</a>
+               title="Descargar PDF">📄 PDF</a>
+          {% endif %}
+          
+          <!-- Botón Remito (FACTURADO) -->
+          {% if estado == "FACTURADO" and p.get("venta_id") %}
+            <a class="btn" href="/ventas/{{ p.get('venta_id') }}/remito.pdf" target="_blank" 
+               style="padding:.3rem .5rem;font-size:.85em;text-decoration:none;background:#e8f5e9"
+               title="Remito de Venta">📄 Remito</a>
           {% endif %}
           
           {% if estado == "NUEVO" %}

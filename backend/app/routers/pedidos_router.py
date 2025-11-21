@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Request, BackgroundTasks
 from fastapi.responses import HTMLResponse, Response
 from sqlalchemy.orm import Session
 from typing import Optional
@@ -89,11 +89,12 @@ def cambiar_estado(
     pedido_id: int,
     data: PedidoEstadoChange,
     request: Request,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
     """Cambiar el estado de un pedido"""
-    return change_estado(db, pedido_id, data.estado, user=user, request=request)
+    return change_estado(db, pedido_id, data.estado, user=user, request=request, background_tasks=background_tasks)
 
 
 @router.post("/{pedido_id}/facturar", response_model=PedidoFacturarResponse)
@@ -128,6 +129,29 @@ def get_packing_pdf(
         media_type="application/pdf",
         headers={
             "Content-Disposition": f"inline; filename=packing_pedido_{pedido_id}.pdf"
+        }
+    )
+
+
+@router.get("/{pedido_id}/label.pdf", dependencies=[Depends(get_current_user)])
+def get_label_pdf(
+    pedido_id: int,
+    db: Session = Depends(get_db),
+):
+    """Generar etiqueta con QR para el pedido"""
+    from app.services.label_service import generate_label_pdf
+    from app.services.pedidos_service import obtener_pedido
+    
+    pedido = obtener_pedido(db, pedido_id)
+    if not pedido:
+        raise HTTPException(status_code=404, detail="Pedido no encontrado")
+    
+    pdf_content = generate_label_pdf(pedido)
+    return Response(
+        content=pdf_content,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f"attachment; filename=label_pedido_{pedido_id:06d}.pdf"
         }
     )
 

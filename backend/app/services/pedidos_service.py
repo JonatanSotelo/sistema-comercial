@@ -322,7 +322,8 @@ def change_estado(
     pedido_id: int,
     nuevo_estado: EstadoPedido,
     user: Optional[Any] = None,
-    request: Optional[Request] = None
+    request: Optional[Request] = None,
+    background_tasks: Optional[Any] = None
 ) -> Pedido:
     """Cambiar estado del pedido con validación de transiciones"""
     pedido = obtener_pedido(db, pedido_id)
@@ -405,6 +406,17 @@ def change_estado(
 
         db.commit()
         db.refresh(pedido)
+        
+        # Hook de notificación: si pasa a LISTO, enviar notificación en background
+        if nuevo_estado == EstadoPedido.LISTO and background_tasks:
+            try:
+                from app.services.notifications_service import notify_order_ready
+                background_tasks.add_task(notify_order_ready, db, pedido_id)
+                print(f"[notif] Notificación programada para pedido {pedido_id}")
+            except Exception as e:
+                print(f"[notif] Error al programar notificación: {e}")
+                # No fallar el cambio de estado si falla la notificación
+        
         return pedido
 
     except HTTPException:
@@ -516,6 +528,9 @@ def facturar_pedido(
             )
 
         venta.total = total
+        
+        # Guardar venta_id en el pedido (v0.8.0)
+        pedido.venta_id = venta.id
         
         # Log de auditoría de la venta
         try:

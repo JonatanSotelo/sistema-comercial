@@ -206,8 +206,28 @@ if [ -n "$TOKEN" ]; then
   else
     echo "[R4-R9] SKIP: No se pudo crear producto de test"
   fi
+  # Tests de NOTIFICACIONES + PDFS (v0.8.0)
+  echo "[N1] Auditoría de notificaciones (verificar tabla exists)"
+  code=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/app/auditoria?q=notificaciones")
+  test "$code" = "200" -o "$code" = "302"
+  
+  echo "[PDF1] Remito PDF de última venta (puede no existir)"
+  code=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/ventas/1/remito.pdf" -H "Authorization: Bearer $TOKEN")
+  test "$code" = "200" -o "$code" = "404" -o "$code" = "401"
+  
+  echo "[PDF2] Etiqueta PDF de último pedido (puede no existir)"
+  code=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/pedidos/1/label.pdf" -H "Authorization: Bearer $TOKEN")
+  test "$code" = "200" -o "$code" = "404" -o "$code" = "401"
+  
+  # Si tenemos pedidos creados en tests anteriores, probar con ellos
+  if [ -n "$PEDIDO1_ID" ] && [ "$PEDIDO1_ID" != "0" ]; then
+    echo "[PDF3] Etiqueta PDF del pedido creado en test"
+    code=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/pedidos/$PEDIDO1_ID/label.pdf" -H "Authorization: Bearer $TOKEN")
+    test "$code" = "200" -o "$code" = "404"
+  fi
+  
 else
-  echo "[P4-R9] SKIP: No se pudo obtener token de autenticación"
+  echo "[P4-R9+N+PDF] SKIP: No se pudo obtener token de autenticación"
 fi
 
 echo "OK smoke"

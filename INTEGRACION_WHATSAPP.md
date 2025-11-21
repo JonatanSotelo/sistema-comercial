@@ -253,11 +253,114 @@ Los pedidos creados desde WhatsApp aparecen en `/app/pedidos` con:
 - **Botones de impresión:** Packing slip HTML/PDF cuando está EN_PREPARACION o LISTO
 - **Acciones masivas:** Cambiar estado de múltiples pedidos a la vez
 
+## Notificaciones Automáticas (v0.8.0+)
+
+### Configuración
+
+Agregar en `backend/.env`:
+
+```env
+# Habilitar/deshabilitar notificaciones automáticas
+NOTIFY_ON_READY=true
+
+# URL del webhook del bot WhatsApp (micro-servicio)
+NOTIFY_WHATS_ENDPOINT=https://tu-bot.com/webhook/order-ready
+
+# Token de autenticación para el webhook
+NOTIFY_WHATS_TOKEN=tu-token-secreto-notificaciones
+
+# SMTP (Opcional - email de respaldo)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=tu-email@gmail.com
+SMTP_PASS=tu-app-password
+SMTP_FROM=noreply@sistema-comercial.com
+```
+
+### Cuándo se Dispara
+
+Cuando un pedido cambia a estado **LISTO** y `NOTIFY_ON_READY=true`, el sistema envía automáticamente:
+1. Notificación WhatsApp al teléfono del cliente (si está configurado)
+2. Email opcional (si SMTP está configurado)
+
+### Payload Enviado al Bot
+
+```json
+{
+  "phone": "5491100000000",
+  "customer_name": "Juan Pérez",
+  "order_id": 123,
+  "items": [
+    {
+      "producto": "Batería 12V 65Ah",
+      "cantidad": 2,
+      "precio": 15000.0
+    }
+  ],
+  "total": 30000.0,
+  "external_ref": "whatsapp_msg_456",
+  "message": "¡Tu pedido #123 está listo para retirar! Total: $30000.00"
+}
+```
+
+### Headers del Request
+
+```
+POST https://tu-bot.com/webhook/order-ready
+Authorization: Bearer {NOTIFY_WHATS_TOKEN}
+Content-Type: application/json
+```
+
+### Comportamiento
+
+- **No bloqueante**: Se ejecuta en background (FastAPI BackgroundTasks)
+- **Reintentos**: 3 intentos con backoff exponencial (0.5s, 1s, 2s)
+- **Timeout**: 5 segundos por intento
+- **Fallo**: Si no puede enviar, registra error en auditoría pero NO falla el cambio de estado del pedido
+- **Auditoría**: Todos los intentos se registran en `table_name="notificaciones"`
+
+### Ejemplo de Auditoría
+
+```json
+{
+  "table_name": "notificaciones",
+  "action": "CREATE",
+  "record_id": "123",
+  "details": {
+    "type": "order_ready",
+    "success": true,
+    "phone": "5491100000000",
+    "items_count": 2
+  }
+}
+```
+
+### Troubleshooting
+
+**Notificación no enviada:**
+1. Verificar que `NOTIFY_ON_READY=true` en `.env`
+2. Verificar que el pedido tiene `telefono` o el cliente tiene `telefono`
+3. Revisar logs del backend: `docker compose logs sc_backend | grep notif`
+4. Revisar auditoría: `/app/auditoria?q=notificaciones`
+5. Verificar que el webhook del bot responde correctamente
+
+**Ver historial de notificaciones:**
+```bash
+# API
+GET /app/auditoria?q=notificaciones
+
+# SQL directo
+SELECT * FROM auditoria 
+WHERE table_name = 'notificaciones' 
+ORDER BY created_at DESC LIMIT 20;
+```
+
 ## Notas
 
 - El campo `codigo` ya existe en el modelo `Producto` (no requiere migración)
 - Sin campo "Activo" en formularios/tablas (CARRERA)
 - Los parciales de tabla están envueltos en `<div id="tabla">…</div>` y usan HTMX
-- Los pedidos de WhatsApp NO reservan stock hasta facturar
+- **v0.7.5+**: Los pedidos reservan stock automáticamente al pasar a EN_PREPARACION
+- **v0.8.0+**: Notificaciones automáticas cuando el pedido está LISTO
 
 

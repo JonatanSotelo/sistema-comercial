@@ -28,6 +28,7 @@ class Pedido(Base):
     total = Column(Numeric(12, 2), default=0, nullable=False)
     created_by = Column(Integer, ForeignKey("usuarios.id", ondelete="SET NULL"), nullable=True)
     external_ref = Column(String, nullable=True)
+    venta_id = Column(Integer, ForeignKey("ventas.id", ondelete="SET NULL"), nullable=True)  # v0.8.0: link a venta
     
     # Relationships
     cliente = relationship("Cliente", back_populates="pedidos")
@@ -37,6 +38,7 @@ class Pedido(Base):
         cascade="all, delete-orphan",
     )
     created_by_user = relationship("User", foreign_keys=[created_by])
+    venta = relationship("Venta", foreign_keys=[venta_id])
 
 
 class PedidoItem(Base):
