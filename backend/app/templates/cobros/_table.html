@@ -1,0 +1,62 @@
+<div id="tabla">
+  <table class="table table-sm table-striped">
+    <thead class="table-dark">
+      <tr>
+        <th>ID</th>
+        <th>Fecha</th>
+        <th>Venta</th>
+        <th>Medio</th>
+        <th>Importe</th>
+        <th>Estado</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% if items %}
+      {% for c in items %}
+      <tr>
+        <td>{{ c.id }}</td>
+        <td>{{ c.created_at[:16] if c.created_at else "" }}</td>
+        <td>Venta #{{ c.venta_id }}</td>
+        <td><span class="badge bg-info">{{ c.medio }}</span></td>
+        <td>${{ "%.2f"|format(c.importe) }}</td>
+        <td>
+          {% if c.estado == "CONFIRMADO" %}
+            <span class="badge bg-success">Confirmado</span>
+          {% else %}
+            <span class="badge bg-danger">Anulado</span>
+          {% endif %}
+        </td>
+        <td>
+          <a href="/cobros/{{ c.id }}/pdf" target="_blank" 
+             class="btn btn-sm btn-outline-primary" title="Descargar Recibo">
+            📄 Recibo
+          </a>
+          {% if c.estado == "CONFIRMADO" %}
+            <button class="btn btn-sm btn-outline-danger"
+                    hx-post="/cobros/{{ c.id }}/anular"
+                    hx-target="#tabla"
+                    hx-swap="outerHTML"
+                    hx-confirm="¿Anular este cobro?"
+                    title="Anular cobro">
+              ❌
+            </button>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    {% else %}
+      <tr>
+        <td colspan="7" class="text-center text-muted">
+          No hay cobros para mostrar
+        </td>
+      </tr>
+    {% endif %}
+    </tbody>
+  </table>
+</div>
+
+{% if oob_clear %}
+  <div id="form-container" hx-swap-oob="true"></div>
+{% endif %}
+

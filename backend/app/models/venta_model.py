@@ -27,6 +27,9 @@ class Venta(Base):
     
     # Relación con Facturas (v0.9.0+)
     facturas = relationship("Factura", back_populates="venta", cascade="all, delete-orphan")
+    
+    # Relación con Cobros (v0.9.1+)
+    cobros = relationship("Cobro", back_populates="venta", cascade="all, delete-orphan")
 
 
 class VentaItem(Base):

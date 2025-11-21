@@ -27,6 +27,8 @@ from app.routers.permiso_router import router as permiso_router  # 👈 nuevo
 from app.routers.integrations_whatsapp_router import router as integrations_whatsapp_router  # 👈 nuevo
 from app.routers.pedidos_router import router as pedidos_router  # 👈 nuevo
 from app.routers.facturacion_router import router as facturacion_router  # v0.9.0
+from app.routers.cobros_router import router as cobros_router  # v0.9.1
+from app.routers.iva_compras_router import router as iva_compras_router  # v0.9.1
 
 def register_routers(app: FastAPI) -> None:
     app.include_router(health_router)
@@ -54,3 +56,5 @@ def register_routers(app: FastAPI) -> None:
     app.include_router(integrations_whatsapp_router)  # 👈 nuevo
     app.include_router(pedidos_router)  # 👈 nuevo
     app.include_router(facturacion_router)  # v0.9.0
+    app.include_router(cobros_router)  # v0.9.1
+    app.include_router(iva_compras_router)  # v0.9.1

@@ -288,3 +288,25 @@ async def importar(
         "errores": errores[:10],
         "sample_rows": sample_rows,
     }
+
+
+# --------- Saldo (v0.9.1) ----------
+@router.get("/{cliente_id}/saldo", dependencies=[Depends(require_user)])
+def obtener_saldo_cliente(cliente_id: int, db: Session = Depends(get_db)):
+    """
+    Obtiene el saldo pendiente de un cliente.
+    Saldo = Suma de saldos de todas las ventas del cliente.
+    """
+    from app.services.cobros_service import get_saldo_cliente
+    
+    cliente = db.query(Cliente).filter(Cliente.id == cliente_id).first()
+    if not cliente:
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+    
+    saldo = get_saldo_cliente(db, cliente_id)
+    
+    return {
+        "cliente_id": cliente_id,
+        "cliente_nombre": cliente.nombre,
+        "saldo": saldo
+    }

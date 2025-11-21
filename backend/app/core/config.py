@@ -47,6 +47,11 @@ class Settings(BaseSettings):
     FACTURA_MONEDA: str = "ARS"
     FACTURA_COTIZACION: float = 1.000
     
+    # Cobros & Caja (v0.9.1+)
+    RECIBO_SERIE: str = "R"
+    RECIBO_PDF_FOOTER: str = "Gracias por su pago"
+    TZ: str = "America/Argentina/Buenos_Aires"
+    
     class Config:
         env_file = ".env"
         case_sensitive = False

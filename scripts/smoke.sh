@@ -246,9 +246,56 @@ if [ -n "$TOKEN" ]; then
   echo "[FAC5] GET /facturas/1/pdf (puede no existir)"
   code=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/facturacion/1/pdf" -H "Authorization: Bearer $TOKEN")
   test "$code" = "200" -o "$code" = "404" -o "$code" = "401"
+  
+  # Cobros & Caja (v0.9.1)
+  echo "[COB1] GET /app/cobros"
+  code=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/app/cobros")
+  test "$code" = "200" -o "$code" = "302"
+  
+  echo "[COB2] GET /app/cobros/table (HTMX partial)"
+  code=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/app/cobros/table" -H "Cookie: access_token=$TOKEN")
+  test "$code" = "200" -o "$code" = "401"
+  
+  echo "[COB3] GET /cobros (API list cobros)"
+  code=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/cobros" -H "Authorization: Bearer $TOKEN")
+  test "$code" = "200" -o "$code" = "401"
+  
+  echo "[COB4] GET /clientes/1/saldo (puede no existir)"
+  code=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/clientes/1/saldo" -H "Authorization: Bearer $TOKEN")
+  test "$code" = "200" -o "$code" = "404" -o "$code" = "401"
+  
+  echo "[COB5] GET /cobros/1/pdf (puede no existir)"
+  code=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/cobros/1/pdf" -H "Authorization: Bearer $TOKEN")
+  test "$code" = "200" -o "$code" = "404" -o "$code" = "401"
+  
+  # IVA Compras (v0.9.1)
+  echo "[IVC1] GET /app/iva-compras"
+  code=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/app/iva-compras")
+  test "$code" = "200" -o "$code" = "302"
+  
+  echo "[IVC2] GET /app/iva-compras/table (HTMX partial)"
+  code=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/app/iva-compras/table" -H "Cookie: access_token=$TOKEN")
+  test "$code" = "200" -o "$code" = "401"
+  
+  echo "[IVC3] GET /iva-compras (API list)"
+  code=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/iva-compras" -H "Authorization: Bearer $TOKEN")
+  test "$code" = "200" -o "$code" = "401"
+  
+  echo "[IVC4] GET /reportes/libro-iva-compras?desde=2025-01-01&hasta=2025-12-31&format=csv"
+  code=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/reportes/libro-iva-compras?desde=2025-01-01&hasta=2025-12-31&format=csv" -H "Authorization: Bearer $TOKEN")
+  test "$code" = "200" -o "$code" = "401" -o "$code" = "400"
+  
+  # Reportes adicionales (v0.9.1)
+  echo "[REP1] GET /reportes/cuentas-corrientes (JSON)"
+  code=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/reportes/cuentas-corrientes" -H "Authorization: Bearer $TOKEN")
+  test "$code" = "200" -o "$code" = "401"
+  
+  echo "[REP2] GET /reportes/cuentas-corrientes?format=csv"
+  code=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/reportes/cuentas-corrientes?format=csv" -H "Authorization: Bearer $TOKEN")
+  test "$code" = "200" -o "$code" = "401"
 
 else
-  echo "[P4-R9+N+PDF+FAC] SKIP: No se pudo obtener token de autenticación"
+  echo "[P4-R9+N+PDF+FAC+COB+IVC+REP] SKIP: No se pudo obtener token de autenticación"
 fi
 
 echo "OK smoke"

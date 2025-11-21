@@ -438,3 +438,107 @@ def libro_iva_ventas(
         from fastapi import HTTPException, status
         raise HTTPException(status_code=400, detail=str(e))
 
+
+@router.get("/libro-iva-compras")
+def libro_iva_compras(
+    desde: str = Query(..., description="Fecha desde (YYYY-MM-DD)"),
+    hasta: str = Query(..., description="Fecha hasta (YYYY-MM-DD)"),
+    format: str = Query("csv", regex="^(csv|xlsx)$"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_user),
+):
+    """
+    Genera el Libro IVA Compras en formato CSV o XLSX.
+    v0.9.1
+    """
+    from app.services.libro_iva_compras_service import LibroIVAComprasService
+    
+    service = LibroIVAComprasService(db)
+    registros = service.get_registros(desde=desde, hasta=hasta)
+    
+    if format == "csv":
+        csv_data = service.export_csv(registros)
+        return Response(content=csv_data, media_type="text/csv", headers={
+            "Content-Disposition": f"attachment; filename=libro_iva_compras_{desde}_{hasta}.csv"
+        })
+    else:  # xlsx
+        xlsx_bytes = service.export_xlsx(registros)
+        return Response(content=xlsx_bytes, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", headers={
+            "Content-Disposition": f"attachment; filename=libro_iva_compras_{desde}_{hasta}.xlsx"
+        })
+
+
+@router.get("/cuentas-corrientes")
+def reporte_cuentas_corrientes(
+    cliente_id: Optional[int] = Query(None, description="Filtrar por cliente"),
+    desde: Optional[str] = Query(None, description="Fecha desde YYYY-MM-DD"),
+    hasta: Optional[str] = Query(None, description="Fecha hasta YYYY-MM-DD"),
+    format: str = Query("json", regex="^(json|csv|xlsx)$"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_user),
+):
+    """
+    Reporte de Cuentas Corrientes: movimientos (ventas=débitos, cobros=créditos) + saldo.
+    v0.9.1
+    """
+    from app.services.cobros_service import CobrosService
+    import io
+    
+    service = CobrosService(db, current_user.id)
+    movimientos = service.get_cuentas_corrientes(cliente_id=cliente_id, desde=desde, hasta=hasta)
+    
+    if format == "json":
+        return movimientos
+    
+    # Export CSV o XLSX
+    if format == "csv":
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(["Fecha", "Cliente", "Tipo", "Referencia", "Débito", "Crédito", "Saldo"])
+        
+        for mov in movimientos:
+            writer.writerow([
+                mov.get("fecha", ""),
+                mov.get("cliente_nombre", ""),
+                mov.get("tipo", ""),  # "VENTA" o "COBRO"
+                mov.get("referencia", ""),
+                f"{mov.get('debito', 0):.2f}",
+                f"{mov.get('credito', 0):.2f}",
+                f"{mov.get('saldo', 0):.2f}",
+            ])
+        
+        csv_data = output.getvalue()
+        return Response(content=csv_data, media_type="text/csv", headers={
+            "Content-Disposition": f"attachment; filename=cuentas_corrientes_{desde or 'all'}_{hasta or 'all'}.csv"
+        })
+    
+    else:  # xlsx
+        if not Workbook:
+            from fastapi import HTTPException, status
+            raise HTTPException(status_code=400, detail="XLSX requiere openpyxl instalado")
+        
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Cuentas Corrientes"
+        ws.append(["Fecha", "Cliente", "Tipo", "Referencia", "Débito", "Crédito", "Saldo"])
+        
+        for mov in movimientos:
+            ws.append([
+                mov.get("fecha", ""),
+                mov.get("cliente_nombre", ""),
+                mov.get("tipo", ""),
+                mov.get("referencia", ""),
+                mov.get("debito", 0),
+                mov.get("credito", 0),
+                mov.get("saldo", 0),
+            ])
+        
+        output = io.BytesIO()
+        wb.save(output)
+        output.seek(0)
+        xlsx_bytes = output.getvalue()
+        
+        return Response(content=xlsx_bytes, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", headers={
+            "Content-Disposition": f"attachment; filename=cuentas_corrientes_{desde or 'all'}_{hasta or 'all'}.xlsx"
+        })
+

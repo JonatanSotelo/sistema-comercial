@@ -10,7 +10,7 @@ class Cliente(Base):
     email = Column(String, nullable=True)
     telefono = Column(String, nullable=True)
     cuit = Column(String, nullable=True, index=True)
-    direccion = Column(String, nullable=True)
+    # direccion = Column(String, nullable=True)  # TODO: Agregar en migración futura si es necesario
     
     # Campos fiscales para facturación (v0.9.0+)
     condicion_iva = Column(String, nullable=True)  # RI, MONO, CF, EXENTO
