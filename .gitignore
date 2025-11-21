@@ -1,2 +1,13 @@
+# Environment variables
 backend/.env
-backend/.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+
+# Backups locales
+backups/
+backend/backups/
