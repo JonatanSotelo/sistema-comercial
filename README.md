@@ -1,314 +1,259 @@
-# 🏪 Sistema Comercial - Documentación Principal
+# 🏪 Sistema Comercial - UI Python (HTMX)
 
 ## 🎯 Descripción General
 
-Sistema de gestión comercial completo desarrollado con **FastAPI** y **PostgreSQL**. Incluye gestión de clientes, proveedores, productos, stock, compras, ventas, usuarios, auditoría y respaldos automáticos.
+Sistema de gestión comercial completo desarrollado con **FastAPI**, **PostgreSQL** y **UI Python (HTMX/Jinja2)**. 
+
+Incluye gestión completa de clientes, proveedores, productos, stock, compras, ventas, pedidos, facturación electrónica AFIP, cobros, auditoría y reportes.
 
 ### ✨ Características Principales
-- **Gestión Completa**: Clientes, proveedores, productos, stock, compras, ventas
-- **Autenticación JWT**: Sistema seguro de usuarios y roles
-- **Control de Stock**: Movimientos automáticos IN/OUT con validaciones
+
+- **UI Python con HTMX**: Frontend moderno sin JavaScript pesado, renderizado server-side
+- **Gestión Completa**: Clientes, proveedores, productos, stock, compras, ventas, pedidos
+- **Facturación Electrónica AFIP**: WSFEv1 con CAE, QR y PDF
+- **Cobros y Caja**: Gestión de cobros, saldos por cliente, recibos PDF
+- **Pedidos y Reservas**: Estados de pedidos (NUEVO → EN_PREPARACION → LISTO → FACTURADO), reservas de stock
+- **Integración WhatsApp**: Creación automática de pedidos/ventas desde bot
 - **Auditoría**: Registro completo de todas las operaciones
-- **Respaldos Automáticos**: Backups diarios programados
-- **Monitoreo**: Métricas, alertas y health checks en tiempo real
-- **Validaciones**: Reglas de negocio robustas y rate limiting
-- **CI/CD**: Pipeline automatizado de testing y deployment
-- **Producción**: Configuración lista para producción con Nginx y SSL
+- **Import/Export**: CSV y XLSX para clientes, productos, proveedores
+- **Backups**: Respaldos automáticos programados
+- **Reportes**: Ventas, compras, pedidos, IVA ventas/compras, cuentas corrientes
 
 ---
 
-## 📚 Documentación Disponible
+## 🚀 Inicio Rápido (Desarrollo)
 
-### **🚀 Inicio Rápido**
-- **[QUICK_START.md](QUICK_START.md)** - Guía de inicio rápido (5 minutos)
-- **[DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)** - Guía completa de deployment
+### **1. Requisitos**
+- Docker y Docker Compose
+- Git
 
-### **📖 Documentación Técnica**
-- **[GUIA_COMPLETA.md](GUIA_COMPLETA.md)** - Guía completa del sistema
-- **[API_REFERENCE.md](API_REFERENCE.md)** - Referencia completa de la API
-- **[backend/README.md](backend/README.md)** - Documentación técnica del backend
-
-### **🔧 Configuración**
-- **[env.example](backend/env.example)** - Plantilla de variables de entorno
-- **[docker-compose.prod.yml](docker-compose.prod.yml)** - Configuración de producción
-- **[nginx.conf](nginx.conf)** - Configuración de Nginx
-
----
-
-## ⚡ Inicio Rápido
-
-### **1. Clonar y Levantar**
+### **2. Clonar y Configurar**
 ```bash
 git clone <tu-repositorio>
 cd sistema-comercial
-cd infra
-docker compose up -d
 ```
 
-### **2. Configurar Base de Datos**
+### **3. Levantar Servicios**
 ```bash
-# Ejecutar migraciones
-docker compose exec backend alembic upgrade head
-
-# Poblar datos iniciales
-docker compose exec backend python -c "from app.seed import run; run()"
+docker compose -f docker-compose.dev.yml up -d --build
 ```
 
-### **3. ¡Listo! Acceder al Sistema**
-- **API**: http://localhost:8000
-- **Documentación**: http://localhost:8000/docs
-- **Usuario**: `admin` / `admin123`
+### **4. Ejecutar Migraciones**
+```bash
+docker compose -f docker-compose.dev.yml exec sc_backend alembic upgrade head
+```
+
+### **5. Verificar Migración Actual**
+```bash
+docker compose -f docker-compose.dev.yml exec sc_backend alembic current
+```
+
+### **6. Acceder al Sistema**
+- **UI (HTMX)**: http://localhost:8000/app/login
+- **API Docs**: http://localhost:8000/docs
+- **PgAdmin**: http://localhost:5050
+
+**Credenciales por defecto:**
+- Usuario: `admin`
+- Password: `admin123`
 
 ---
 
-## 🏗️ Arquitectura del Sistema
-
-### **Tecnologías Utilizadas**
-- **Backend**: FastAPI, SQLAlchemy, Alembic
-- **Base de Datos**: PostgreSQL
-- **Autenticación**: JWT con Passlib
-- **Testing**: Pytest con coverage
-- **Deployment**: Docker, Docker Compose, Nginx
-- **CI/CD**: GitHub Actions
-- **Monitoreo**: Sistema custom de métricas y alertas
-
-### **Estructura del Proyecto**
-```
-sistema-comercial/
-├── backend/                 # Backend FastAPI
-│   ├── app/
-│   │   ├── core/           # Configuración central
-│   │   ├── db/             # Base de datos
-│   │   ├── models/         # Modelos SQLAlchemy
-│   │   ├── schemas/        # Esquemas Pydantic
-│   │   ├── services/       # Lógica de negocio
-│   │   └── routers/        # Endpoints FastAPI
-│   ├── tests/              # Tests automatizados
-│   ├── migrations/         # Migraciones Alembic
-│   └── requirements.txt    # Dependencias
-├── .github/workflows/      # CI/CD Pipeline
-├── docker-compose.yml      # Desarrollo
-├── docker-compose.prod.yml # Producción
-├── nginx.conf              # Configuración Nginx
-├── deploy.sh               # Script de deployment
-└── README.md               # Esta documentación
-```
-
----
-
-## 🔌 API Endpoints Principales
-
-### **Autenticación**
-- `POST /auth/login` - Login de usuario
-- `GET /auth/me` - Usuario actual
-
-### **Gestión de Datos**
-- `GET /clientes/` - Listar clientes
-- `GET /proveedores/` - Listar proveedores
-- `GET /productos/` - Listar productos
-- `GET /compras/` - Listar compras
-- `GET /ventas/` - Listar ventas
-
-### **Monitoreo**
-- `GET /monitoring/health` - Health check
-- `GET /monitoring/metrics` - Métricas
-- `GET /monitoring/status` - Estado del sistema
-
----
-
-## 🧪 Testing
+## 🧪 Tests y Smoke
 
 ### **Ejecutar Tests**
 ```bash
-cd backend
-pytest
-
-# Con coverage
-pytest --cov=app --cov-report=html
+# Suite completa
+docker compose -f docker-compose.dev.yml exec sc_backend pytest -v
 
 # Tests específicos
-pytest tests/test_ventas_completas.py -v
+docker compose -f docker-compose.dev.yml exec sc_backend pytest tests/test_cobros.py -v
+docker compose -f docker-compose.dev.yml exec sc_backend pytest tests/test_pedidos.py -v
+docker compose -f docker-compose.dev.yml exec sc_backend pytest tests/test_reservas.py -v
+docker compose -f docker-compose.dev.yml exec sc_backend pytest tests/test_facturacion_afip.py -v
 ```
 
-### **Cobertura de Tests**
-- **Ventas**: Stock insuficiente, precios personalizados, clientes
-- **Compras**: Validaciones de proveedores, productos, costos
-- **Stock**: Movimientos múltiples, validaciones de inventario
-- **Autenticación**: Login, registro, roles
-- **Validaciones**: Reglas de negocio, rate limiting
-
----
-
-## 🚀 Deployment
-
-### **Desarrollo**
+### **Smoke Tests**
 ```bash
-cd infra
-docker compose up -d
-```
+# Bash (Linux/Mac/WSL)
+bash scripts/smoke.sh
 
-### **Producción**
-```bash
-# Configurar variables
-cp backend/env.example .env
-nano .env
-
-# Ejecutar deployment
-./deploy.sh
-```
-
-### **CI/CD**
-El pipeline se ejecuta automáticamente en:
-- Push a main/develop
-- Pull requests a main
-
----
-
-## 📊 Monitoreo y Alertas
-
-### **Health Checks**
-```bash
-curl http://localhost:8000/monitoring/health
-```
-
-### **Métricas en Tiempo Real**
-```bash
-curl http://localhost:8000/monitoring/metrics
-```
-
-### **Alertas Automáticas**
-- Error Rate Alto (>10%)
-- Response Time Alto (>5s)
-- Errores Consecutivos (>5)
-- Base de Datos no disponible
-- Sistema de Backup no accesible
-
----
-
-## 🛡️ Validaciones de Negocio
-
-### **Validaciones Implementadas**
-- **Email**: Formato válido con regex
-- **Teléfono**: Formato internacional
-- **Precios**: Valores positivos, máximo 2 decimales
-- **Cantidades**: Valores positivos, validación de stock
-- **Usuarios**: Username válido, contraseña segura
-- **Rate Limiting**: 100 requests/minuto por IP
-
----
-
-## 🔧 Troubleshooting
-
-### **Problemas Comunes**
-
-#### **Sistema no responde**
-```bash
-# Ver logs
-docker compose logs -f backend
-
-# Reiniciar
-docker compose restart backend
-```
-
-#### **Error de base de datos**
-```bash
-# Verificar PostgreSQL
-docker compose ps db
-
-# Reiniciar base de datos
-docker compose restart db
-```
-
-#### **Error de autenticación**
-```bash
-# Verificar usuario admin
-docker compose exec backend python -c "
-from app.db.database import SessionLocal
-from app.models.user_model import User
-db = SessionLocal()
-admin = db.query(User).filter(User.username == 'admin').first()
-print('Admin existe:', admin is not None)
-db.close()
-"
+# PowerShell (Windows)
+powershell -ExecutionPolicy Bypass -File scripts\test_cobros_simple.ps1
 ```
 
 ---
 
-## 📈 Roadmap
+## 📦 Estructura del Proyecto
 
-### **Funcionalidades Futuras**
-
-#### **Fase 1 - Mejoras de UX**
-- [ ] Dashboard web con React/Vue
-- [ ] Notificaciones en tiempo real
-- [ ] Reportes y gráficos avanzados
-
-#### **Fase 2 - Funcionalidades Avanzadas**
-- [ ] Sistema de inventario con códigos de barras
-- [ ] Integración con sistemas de pago
-- [ ] API para integración con otros sistemas
-
-#### **Fase 3 - Escalabilidad**
-- [ ] Cache con Redis
-- [ ] Load balancing
-- [ ] Microservicios
-- [ ] Kubernetes deployment
-
-#### **Fase 4 - Inteligencia de Negocio**
-- [ ] Análisis predictivo de ventas
-- [ ] Recomendaciones de productos
-- [ ] Optimización de stock
-- [ ] Machine learning para tendencias
-
----
-
-## 📞 Soporte y Contacto
-
-### **Documentación Adicional**
-- **API Docs**: http://localhost:8000/docs
-- **ReDoc**: http://localhost:8000/redoc
-- **Health Check**: http://localhost:8000/monitoring/health
-
-### **Comandos Útiles**
-
-```bash
-# Reiniciar servicios
-docker compose restart
-
-# Ver logs en tiempo real
-docker compose logs -f
-
-# Ejecutar migraciones
-docker compose exec backend alembic upgrade head
-
-# Crear respaldo manual
-docker compose exec backend python -c "from app.services.backup_service import create_backup_zip; create_backup_zip()"
-
-# Ver estadísticas de uso
-curl http://localhost:8000/monitoring/performance
+```
+sistema-comercial/
+├── backend/                    # Backend FastAPI
+│   ├── app/
+│   │   ├── core/              # Auth, settings, deps, validators
+│   │   ├── models/            # SQLAlchemy models
+│   │   ├── schemas/           # Pydantic schemas
+│   │   ├── routers/           # API endpoints
+│   │   ├── services/          # Business logic
+│   │   ├── web/               # UI HTMX routers
+│   │   └── templates/         # Jinja2 templates (HTMX)
+│   ├── migrations/            # Alembic migrations
+│   ├── tests/                 # Pytest tests
+│   ├── requirements.txt
+│   ├── Dockerfile
+│   └── env.example
+├── scripts/                   # Smoke tests y utilidades
+│   ├── smoke.sh
+│   ├── test_cobros_simple.ps1
+│   └── sql/
+├── docker-compose.dev.yml     # Desarrollo
+├── docker-compose.prod.yml    # Producción
+└── README.md
 ```
 
 ---
 
-## 🎉 ¡Sistema Listo para Producción!
+## 🔧 Configuración
 
-El **Sistema Comercial** está completamente implementado con:
+### **Variables de Entorno (.env)**
 
-✅ **Funcionalidad Completa** - Todos los módulos operativos  
-✅ **Testing Exhaustivo** - Cobertura completa con casos edge  
-✅ **Validaciones Robustas** - Reglas de negocio y rate limiting  
-✅ **Monitoreo Avanzado** - Métricas, alertas y health checks  
-✅ **CI/CD Automatizado** - Pipeline completo de testing y deployment  
-✅ **Configuración de Producción** - Docker, Nginx, SSL, optimizaciones  
+Copiar `backend/env.example` a `backend/.env` y configurar:
 
-**¡Disfruta tu sistema comercial! 🚀**
+```bash
+# Base de datos
+DATABASE_URL=postgresql://appuser:apppass@sc_postgres:5432/appdb
+
+# JWT
+SECRET_KEY=tu-secret-key-aqui
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+
+# Facturación AFIP (opcional)
+AFIP_ENV=homologacion
+AFIP_CUIT=20123456789
+AFIP_CERT_PATH=/secrets/cert.pem
+AFIP_KEY_PATH=/secrets/key.pem
+FACTURA_PTO_VTA=1
+
+# Notificaciones (opcional)
+NOTIFY_ON_READY=false
+NOTIFY_WHATS_ENDPOINT=http://whatsapp-bot/webhook
+```
 
 ---
 
-## 📚 Enlaces Rápidos
+## 📚 Módulos Implementados
 
-- **[🚀 Quick Start](QUICK_START.md)** - Inicio rápido
-- **[📖 Guía Completa](GUIA_COMPLETA.md)** - Documentación completa
-- **[🔧 Deployment](DEPLOYMENT_GUIDE.md)** - Guía de deployment
-- **[📚 API Reference](API_REFERENCE.md)** - Referencia de la API
-- **[🔧 Backend README](backend/README.md)** - Documentación técnica
+### **v0.9.1 - Cobros & Caja + IVA Compras** ✅
+- Registro de cobros por venta (efectivo, transferencia, cheque, etc.)
+- Cálculo de saldos por venta y por cliente
+- Recibos PDF con detalle de cobros
+- Libro IVA Compras (registro manual de facturas de compra)
+- Reportes: Cuentas corrientes, IVA Compras
+
+### **v0.9.0 - Facturación Electrónica AFIP** ✅
+- Integración WSFEv1 (WSAA + WSFEv1)
+- Emisión de Facturas A/B/C con CAE
+- QR AFIP en facturas
+- PDF de facturas con datos fiscales
+- Libro IVA Ventas (export CSV/XLSX)
+
+### **v0.8.0 - Notificaciones + Remito + Etiqueta** ✅
+- Notificaciones WhatsApp/Email cuando Pedido → LISTO
+- Remito PDF para ventas
+- Etiqueta PDF con QR para pedidos
+
+### **v0.7.5 - Reservas de Stock** ✅
+- Reservas soft de stock al cambiar Pedido a EN_PREPARACION
+- Cálculo de stock disponible = stock - reservas activas
+- Consumo de reservas al facturar
+- Liberación de reservas al cancelar
+
+### **Pedidos (v0.7.x)** ✅
+- Estados: NUEVO → EN_PREPARACION → LISTO → FACTURADO / CANCELADO
+- Integración con WhatsApp para crear pedidos automáticamente
+- Packing lists (HTML/PDF)
+- Acciones masivas (bulk state changes)
+- Reportes de pedidos agrupados
+
+### **Core (v0.5.x - v0.6.x)** ✅
+- CRUD Clientes, Proveedores, Productos
+- Compras y Ventas con items
+- Control de stock (IN/OUT)
+- Import/Export CSV/XLSX
+- Backups automáticos
+- Auditoría completa
+- Dashboard con métricas
+
+---
+
+## 🗂️ Historial de Arquitectura
+
+### **Línea Principal: HTMX (actual)**
+Esta rama (`main`) utiliza **UI Python (HTMX + Jinja2)** para el frontend, con renderizado server-side y actualizaciones dinámicas sin JavaScript pesado.
+
+### **Frontend React (legacy)**
+El frontend React/TypeScript original está archivado en la rama `react-legacy` para referencia histórica.
+
+**Para acceder al código React legacy:**
+```bash
+git checkout react-legacy
+```
+
+**Nota:** La línea HTMX es la activa y recomendada. El frontend React no se mantiene activamente.
+
+---
+
+## 📖 Documentación Adicional
+
+- **[API_REFERENCE.md](API_REFERENCE.md)** - Referencia completa de endpoints
+- **[DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)** - Guía de deployment a producción
+- **[backend/README.md](backend/README.md)** - Documentación técnica del backend
+- **[QUICK_START.md](QUICK_START.md)** - Guía de inicio rápido
+- **[GUIA_COMPLETA.md](GUIA_COMPLETA.md)** - Guía completa del sistema
+
+---
+
+## 🏷️ Versiones
+
+- **v0.9.1** - Cobros & Caja + IVA Compras (actual)
+- **v0.9.0** - Facturación Electrónica AFIP
+- **v0.8.0** - Notificaciones + Remito + Etiqueta
+- **v0.7.5** - Reservas de Stock
+- **v0.7.0** - Módulo Pedidos + WhatsApp
+- **v0.6.0** - Import/Export + Backups
+- **v0.5.0** - Core CRUD + Stock
+
+**Ver changelog completo:** `git tag -l -n9`
+
+---
+
+## 🤝 Contribuir
+
+1. Crear rama desde `main`: `git checkout -b feature/mi-feature`
+2. Implementar cambios con tests
+3. Ejecutar smoke tests: `bash scripts/smoke.sh`
+4. Commit y push
+5. Crear Pull Request a `main`
+
+**Convenciones:**
+- `feat:` - Nueva funcionalidad
+- `fix:` - Corrección de bugs
+- `chore:` - Tareas de mantenimiento
+- `docs:` - Documentación
+- `test:` - Tests
+
+---
+
+## 📄 Licencia
+
+Este proyecto es de uso interno. Todos los derechos reservados.
+
+---
+
+## 🆘 Soporte
+
+Para problemas o consultas:
+1. Revisar documentación en `/docs`
+2. Verificar logs: `docker compose -f docker-compose.dev.yml logs sc_backend --tail=100`
+3. Ejecutar health check: `curl http://localhost:8000/health`

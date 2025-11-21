@@ -1,5 +1,7 @@
 # Environment variables
 backend/.env
+.env
+.env.*
 
 # Python
 __pycache__/
@@ -7,7 +9,42 @@ __pycache__/
 *.pyo
 .pytest_cache/
 .mypy_cache/
+.ruff_cache/
+coverage/
+*.coverage*
+
+# Node/React (legacy)
+node_modules/
+dist/
+build/
+.next/
+*.log
+*.map
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+
+# SO / IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
 
 # Backups locales
 backups/
 backend/backups/
+*.dump
+*.sql.gz
+
+# Archivos de prueba temporales
+*.csv
+*.xlsx
+*.pdf
+recibo_*.pdf
+remito_*.pdf
+
+# Scripts Windows obsoletos
+*.bat
+
+# Basura del sistema
+bash.exe.stackdump

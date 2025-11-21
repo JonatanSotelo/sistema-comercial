@@ -1,5 +1,13 @@
-* text=auto
-*.sh text eol=lf
-*.py text eol=lf
-*.ini text eol=lf
-Dockerfile text eol=lf
+# Normalizar line endings
+* text=auto eol=lf
+
+# Binarios explícitos
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.zip binary
+*.gz binary
+*.dump binary
