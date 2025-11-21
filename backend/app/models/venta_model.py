@@ -19,6 +19,11 @@ class Venta(Base):
 
     # LADO MUCHOS a UNO con Cliente (coincide el back_populates)
     cliente = relationship("Cliente", back_populates="ventas")
+    items = relationship(
+        "VentaItem",
+        back_populates="venta",
+        cascade="all, delete-orphan",
+    )
 
 
 class VentaItem(Base):
@@ -31,7 +36,8 @@ class VentaItem(Base):
     precio_unitario = Column(Float, nullable=False)
     subtotal = Column(Float, nullable=False)
 
-    venta = relationship("Venta", backref="items")
+    venta = relationship("Venta", back_populates="items")
+    producto = relationship("Producto")
 
 
 

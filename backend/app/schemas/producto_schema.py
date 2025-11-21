@@ -18,7 +18,7 @@ class ProductoBase(BaseModel):
     activo: bool = True
 
 class ProductoCreate(ProductoBase):
-    pass
+    proveedor_id: Optional[int] = None
 
 class ProductoUpdate(BaseModel):
     nombre: Optional[str] = None
@@ -35,6 +35,7 @@ class ProductoOut(ProductoBase):
     id: int
     created_at: datetime
     updated_at: datetime
+    disponible: Optional[float] = None  # Stock disponible (stock - reservas)
     model_config = ConfigDict(from_attributes=True, json_encoders={
         datetime: lambda v: v.isoformat()
     })

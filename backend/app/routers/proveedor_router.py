@@ -1,6 +1,6 @@
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Dict, Any
 from io import BytesIO
-from fastapi import APIRouter, Depends, Query, HTTPException
+from fastapi import APIRouter, Depends, Query, HTTPException, UploadFile, File
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import asc, desc
@@ -10,6 +10,9 @@ from app.db.database import get_db
 from app.models.proveedor_model import Proveedor
 from app.schemas.proveedor_schema import ProveedorOut, ProveedorCreate, ProveedorUpdate
 from app.core.deps import require_user, require_admin
+from app.services.import_export_service import (
+    parse_import_file, normalize_proveedor_row
+)
 
 router = APIRouter(prefix="/proveedores", tags=["proveedores"])
 
@@ -153,9 +156,10 @@ def list_proveedores(
         "size": size,
     }
 
-# --------- Export Excel ----------
+# --------- Export CSV/XLSX ----------
 @router.get("/export")
 def export_proveedores(
+    format: str = Query("xlsx", regex="^(csv|xlsx)$"),
     search: Optional[str] = Query(None),
     sort: Optional[str] = Query("nombre,-id"),
     db: Session = Depends(get_db),
@@ -166,21 +170,124 @@ def export_proveedores(
     qs = apply_sort(qs, sort)
     rows: List[Proveedor] = qs.all()
 
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "Proveedores"
-    ws.append(["ID", "Nombre", "Email", "Teléfono", "CUIT", "Dirección"])
-
+    headers = ["ID", "Nombre", "Email", "Teléfono", "CUIT", "Dirección"]
+    data_rows = []
     for r in rows:
-        ws.append([r.id, r.nombre, r.email or "", r.telefono or "", r.cuit or "", r.direccion or ""])
+        data_rows.append([r.id, r.nombre, r.email or "", r.telefono or "", r.cuit or "", r.direccion or ""])
 
-    buffer = BytesIO()
-    wb.save(buffer)
-    buffer.seek(0)
-    filename = "proveedores.xlsx"
+    if format == "csv":
+        from io import StringIO
+        import csv as csv_module
+        output = StringIO()
+        writer = csv_module.writer(output)
+        writer.writerow(headers)
+        writer.writerows(data_rows)
+        output.seek(0)
+        return StreamingResponse(
+            iter([output.getvalue().encode("utf-8-sig")]),
+            media_type="text/csv",
+            headers={"Content-Disposition": 'attachment; filename="proveedores.csv"'},
+        )
+    else:  # xlsx
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Proveedores"
+        ws.append(headers)
+        for row in data_rows:
+            ws.append(row)
+        buffer = BytesIO()
+        wb.save(buffer)
+        buffer.seek(0)
+        return StreamingResponse(
+            buffer,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": 'attachment; filename="proveedores.xlsx"'},
+        )
 
-    return StreamingResponse(
-        buffer,
-        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
-    )
+# --------- Import CSV/XLSX ----------
+@router.post("/import")
+async def importar(
+    file: UploadFile = File(...),
+    dry_run: bool = Query(True, description="Si true, solo muestra preview sin ejecutar"),
+    db: Session = Depends(get_db),
+    _auth=Depends(require_admin),
+):
+    """Importa proveedores desde CSV o XLSX con dry_run para preview"""
+    try:
+        file_content = await file.read()
+        headers, rows = parse_import_file(file_content, file.filename or "")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Error al parsear archivo: {e}")
+    
+    insertados = 0
+    actualizados = 0
+    errores: List[Dict[str, Any]] = []
+    sample_rows: List[Dict[str, Any]] = []
+    
+    for idx, row in enumerate(rows, start=2):
+        try:
+            normalized = normalize_proveedor_row(row)
+            
+            # Validar nombre requerido
+            if not normalized.get("nombre"):
+                errores.append({
+                    "fila": idx,
+                    "error": "Nombre es requerido",
+                    "datos": row,
+                })
+                continue
+            
+            # Upsert por CUIT si viene, sino por nombre
+            cuit = normalized.get("cuit")
+            nombre = normalized["nombre"]
+            
+            existing = None
+            if cuit:
+                existing = db.query(Proveedor).filter(Proveedor.cuit == cuit).first()
+            else:
+                existing = db.query(Proveedor).filter(Proveedor.nombre == nombre).first()
+            
+            if existing:
+                # Update
+                if dry_run:
+                    actualizados += 1
+                else:
+                    for k, v in normalized.items():
+                        if k != "nombre":  # No actualizar nombre si es la clave
+                            setattr(existing, k, v)
+                    db.add(existing)
+                    actualizados += 1
+            else:
+                # Insert
+                if dry_run:
+                    insertados += 1
+                else:
+                    proveedor_data = ProveedorCreate(**normalized)
+                    obj = Proveedor(**proveedor_data.model_dump(exclude_none=True))
+                    db.add(obj)
+                    insertados += 1
+            
+            # Agregar a muestra (primeros 5)
+            if len(sample_rows) < 5:
+                sample_rows.append({
+                    "fila": idx,
+                    "accion": "actualizar" if existing else "insertar",
+                    "datos": normalized,
+                })
+        
+        except Exception as e:
+            errores.append({
+                "fila": idx,
+                "error": str(e),
+                "datos": row,
+            })
+    
+    if not dry_run:
+        db.commit()
+    
+    return {
+        "insertados": insertados,
+        "actualizados": actualizados,
+        "errores": errores[:10],
+        "sample_rows": sample_rows,
+    }

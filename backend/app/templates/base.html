@@ -30,7 +30,13 @@
       <a class="btn" href="/app/dashboard">Dashboard</a>
       {% if features.get('productos', True) %}<a class="btn" href="/app/productos">Productos</a>{% endif %}
       {% if features.get('clientes', True) %}<a class="btn" href="/app/clientes">Clientes</a>{% endif %}
+      {% if features.get('pedidos', True) %}<a class="btn" href="/app/pedidos">Pedidos</a>{% endif %}
       {% if features.get('proveedores', True) %}<a class="btn" href="/app/proveedores">Proveedores</a>{% endif %}
+      {% if features.get('ventas', True) %}<a class="btn" href="/app/ventas">Ventas</a>{% endif %}
+      {% if features.get('compras', True) %}<a class="btn" href="/app/compras">Compras</a>{% endif %}
+      {% if features.get('auditoria', True) %}<a class="btn" href="/app/auditoria">Auditoría</a>{% endif %}
+      {% if features.get('reportes', True) %}<a class="btn" href="/app/reportes">Reportes</a>{% endif %}
+      {% if features.get('backups', True) %}<a class="btn" href="/app/backups">Backups</a>{% endif %}
       <span class="right muted">Usuario: {{ user or "—" }}</span>
       <a class="btn" href="/app/logout">Salir</a>
     </nav>

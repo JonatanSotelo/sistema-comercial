@@ -20,3 +20,4 @@ class Proveedor(Base):
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
+    productos = relationship("Producto", back_populates="proveedor")

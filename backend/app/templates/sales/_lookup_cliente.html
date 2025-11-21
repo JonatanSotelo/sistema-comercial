@@ -1,0 +1,21 @@
+<ul style="list-style:none;margin:0;padding:0;border:1px solid #ddd;max-height:200px;overflow-y:auto">
+{% for item in items %}
+  <li style="padding:.5rem;cursor:pointer;border-bottom:1px solid #eee"
+      onclick="
+        document.getElementById('cliente_id').value = '{{ item.get('id') }}';
+        document.getElementById('cliente-search').value = '{{ item.get('nombre') or item.get('name') }}';
+        document.getElementById('cliente-results').style.display = 'none';
+      "
+      onmouseover="this.style.background='#f0f0f0'"
+      onmouseout="this.style.background='white'">
+    {{ item.get("nombre") or item.get("name") }}
+    {% if item.get("email") %}
+      <span style="color:#666;font-size:.9em">({{ item.get("email") }})</span>
+    {% endif %}
+  </li>
+{% endfor %}
+{% if not items %}
+  <li style="padding:.5rem;color:#666">Sin resultados</li>
+{% endif %}
+</ul>
+

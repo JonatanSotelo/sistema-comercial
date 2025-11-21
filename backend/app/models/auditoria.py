@@ -9,6 +9,7 @@ class AuditAction(str, enum.Enum):
     CREATE = "CREATE"
     UPDATE = "UPDATE"
     DELETE = "DELETE"
+    ADJUST = "ADJUST"
     LOGIN  = "LOGIN"
     LOGOUT = "LOGOUT"
 

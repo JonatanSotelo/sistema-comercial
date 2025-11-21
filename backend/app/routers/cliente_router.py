@@ -1,6 +1,6 @@
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Dict, Any
 from io import BytesIO
-from fastapi import APIRouter, Depends, Query, HTTPException
+from fastapi import APIRouter, Depends, Query, HTTPException, UploadFile, File
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import asc, desc
@@ -10,6 +10,9 @@ from app.db.database import get_db
 from app.models.cliente_model import Cliente
 from app.schemas.cliente_schema import ClienteOut, ClienteCreate, ClienteUpdate
 from app.core.deps import require_user, require_admin
+from app.services.import_export_service import (
+    parse_import_file, normalize_cliente_row
+)
 
 router = APIRouter(prefix="/clientes", tags=["clientes"])
 
@@ -147,9 +150,10 @@ def list_clientes(
         "size": size,
     }
 
-# --------- Export Excel ----------
+# --------- Export CSV/XLSX ----------
 @router.get("/export")
 def export_clientes(
+    format: str = Query("xlsx", regex="^(csv|xlsx)$"),
     search: Optional[str] = Query(None),
     sort: Optional[str] = Query("nombre,-id"),
     db: Session = Depends(get_db),
@@ -160,21 +164,127 @@ def export_clientes(
     qs = apply_sort(qs, sort)
     rows: List[Cliente] = qs.all()
 
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "Clientes"
-    ws.append(["ID", "Nombre", "Email", "Telefono", "CUIT"])
-
+    headers = ["ID", "Nombre", "Email", "Telefono", "CUIT"]
+    data_rows = []
     for r in rows:
-        ws.append([r.id, r.nombre, r.email or "", r.telefono or "", r.cuit or ""])
+        data_rows.append([r.id, r.nombre, r.email or "", r.telefono or "", r.cuit or ""])
 
-    buffer = BytesIO()
-    wb.save(buffer)
-    buffer.seek(0)
-    filename = "clientes.xlsx"
+    if format == "csv":
+        from io import StringIO
+        import csv as csv_module
+        output = StringIO()
+        writer = csv_module.writer(output)
+        writer.writerow(headers)
+        writer.writerows(data_rows)
+        output.seek(0)
+        return StreamingResponse(
+            iter([output.getvalue().encode("utf-8-sig")]),
+            media_type="text/csv",
+            headers={"Content-Disposition": 'attachment; filename="clientes.csv"'},
+        )
+    else:  # xlsx
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Clientes"
+        ws.append(headers)
+        for row in data_rows:
+            ws.append(row)
+        buffer = BytesIO()
+        wb.save(buffer)
+        buffer.seek(0)
+        return StreamingResponse(
+            buffer,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": 'attachment; filename="clientes.xlsx"'},
+        )
 
-    return StreamingResponse(
-        buffer,
-        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
-    )
+# --------- Import CSV/XLSX ----------
+@router.post("/import")
+async def importar(
+    file: UploadFile = File(...),
+    dry_run: bool = Query(True, description="Si true, solo muestra preview sin ejecutar"),
+    db: Session = Depends(get_db),
+    _auth=Depends(require_admin),
+):
+    """Importa clientes desde CSV o XLSX con dry_run para preview"""
+    try:
+        file_content = await file.read()
+        headers, rows = parse_import_file(file_content, file.filename or "")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Error al parsear archivo: {e}")
+    
+    insertados = 0
+    actualizados = 0
+    errores: List[Dict[str, Any]] = []
+    sample_rows: List[Dict[str, Any]] = []
+    
+    for idx, row in enumerate(rows, start=2):
+        try:
+            normalized = normalize_cliente_row(row)
+            
+            # Validar nombre requerido
+            if not normalized.get("nombre"):
+                errores.append({
+                    "fila": idx,
+                    "error": "Nombre es requerido",
+                    "datos": row,
+                })
+                continue
+            
+            # Upsert por CUIT si viene, sino por nombre+email
+            cuit = normalized.get("cuit")
+            nombre = normalized["nombre"]
+            email = normalized.get("email")
+            
+            existing = None
+            if cuit:
+                existing = db.query(Cliente).filter(Cliente.cuit == cuit).first()
+            elif nombre and email:
+                existing = db.query(Cliente).filter(
+                    Cliente.nombre == nombre,
+                    Cliente.email == email
+                ).first()
+            
+            if existing:
+                # Update
+                if dry_run:
+                    actualizados += 1
+                else:
+                    for k, v in normalized.items():
+                        setattr(existing, k, v)
+                    db.add(existing)
+                    actualizados += 1
+            else:
+                # Insert
+                if dry_run:
+                    insertados += 1
+                else:
+                    cliente_data = ClienteCreate(**normalized)
+                    obj = Cliente(**cliente_data.model_dump(exclude_none=True))
+                    db.add(obj)
+                    insertados += 1
+            
+            # Agregar a muestra (primeros 5)
+            if len(sample_rows) < 5:
+                sample_rows.append({
+                    "fila": idx,
+                    "accion": "actualizar" if existing else "insertar",
+                    "datos": normalized,
+                })
+        
+        except Exception as e:
+            errores.append({
+                "fila": idx,
+                "error": str(e),
+                "datos": row,
+            })
+    
+    if not dry_run:
+        db.commit()
+    
+    return {
+        "insertados": insertados,
+        "actualizados": actualizados,
+        "errores": errores[:10],
+        "sample_rows": sample_rows,
+    }

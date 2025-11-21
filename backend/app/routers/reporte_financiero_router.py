@@ -78,6 +78,49 @@ def listar_reportes_financieros(
     
     return ReporteFinancieroService.obtener_reportes_financieros(db, filtros, skip, limit)
 
+@router.get("/ultimo", response_model=ReporteFinancieroOut, summary="Obtener último reporte financiero")
+def obtener_ultimo_reporte_financiero(
+    db: Session = Depends(get_db),
+    current_user=Depends(require_user)
+):
+    """
+    Obtiene el último reporte financiero generado.
+    """
+    from app.models.reporte_financiero_model import ReporteFinanciero
+    ultimo_reporte = db.query(ReporteFinanciero).order_by(desc(ReporteFinanciero.fecha_generacion)).first()
+    
+    if not ultimo_reporte:
+        raise HTTPException(status_code=404, detail="No se encontraron reportes financieros")
+    
+    return ultimo_reporte
+
+@router.get("/historial", response_model=List[ReporteFinancieroOut], summary="Obtener historial de reportes financieros")
+def obtener_historial_reportes(
+    skip: int = Query(0, ge=0, description="Número de reportes a omitir"),
+    limit: int = Query(100, ge=1, le=1000, description="Número máximo de reportes a retornar"),
+    tipo: Optional[TipoReporteFinanciero] = Query(None, description="Filtrar por tipo"),
+    periodo: Optional[PeriodoReporte] = Query(None, description="Filtrar por período"),
+    estado: Optional[EstadoReporte] = Query(None, description="Filtrar por estado"),
+    fecha_desde: Optional[date] = Query(None, description="Fecha desde"),
+    fecha_hasta: Optional[date] = Query(None, description="Fecha hasta"),
+    db: Session = Depends(get_db),
+    current_user=Depends(require_user)
+):
+    """
+    Obtiene el historial completo de reportes financieros ordenados por fecha de generación (más recientes primero).
+    """
+    filtros = ReporteFiltros(
+        tipo=tipo,
+        periodo=periodo,
+        estado=estado,
+        fecha_desde=fecha_desde,
+        fecha_hasta=fecha_hasta,
+        creado_por=None,
+        solo_activos=False  # Incluir todos los reportes en el historial
+    )
+    
+    return ReporteFinancieroService.obtener_reportes_financieros(db, filtros, skip, limit)
+
 @router.get("/{reporte_id}", response_model=ReporteFinancieroOut, summary="Obtener reporte financiero")
 def obtener_reporte_financiero(
     reporte_id: int,

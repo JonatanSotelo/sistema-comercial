@@ -17,6 +17,7 @@ def create_audit_log(
     path: Optional[str] = None,
     method: Optional[str] = None,
     ip: Optional[str] = None,
+    auto_commit: bool = False,  # Por defecto no hace commit (para usar en transacciones)
 ) -> AuditLog:
     log = AuditLog(
         user_id=user_id,
@@ -30,8 +31,11 @@ def create_audit_log(
         ip=ip,
     )
     db.add(log)
-    db.commit()
-    db.refresh(log)
+    if auto_commit:
+        db.commit()
+        db.refresh(log)
+    else:
+        db.flush()  # Flush para obtener el ID sin hacer commit
     return log
 
 # --- Helpers cómodos para routers ---

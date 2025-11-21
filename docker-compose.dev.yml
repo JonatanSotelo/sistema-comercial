@@ -33,8 +33,11 @@ services:
       REDIS_URL: redis://sc_redis:6379/0
       API_BASE_URL: http://localhost:8000
       SECRET_KEY: dev-secret
+      BACKUP_DIR: /data/backups
+      WHATS_ORDERS_TOKEN: test-token-123
     volumes:
       - ./backend:/app
+      - ./backups:/data/backups
     ports:
       - "8000:8000"
     depends_on:

@@ -46,3 +46,11 @@ pytest-asyncio
 
 # HTTP requests
 requests==2.31.0
+
+# PDF generation
+reportlab==4.0.7
+
+# Notifications & QR codes
+httpx==0.28.1
+qrcode[pil]==7.4.2
+Pillow>=10.0

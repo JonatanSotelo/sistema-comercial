@@ -19,3 +19,11 @@ class Cliente(Base):
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
+    
+    # Relación con Pedidos
+    pedidos = relationship(
+        "Pedido",
+        back_populates="cliente",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )

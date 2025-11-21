@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Integraciones WhatsApp</h1>
+
+<div class="search" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:.5rem;margin-bottom:1rem">
+  <input id="phone" type="text" placeholder="Teléfono..." name="phone"
+         hx-get="/app/integraciones/whatsapp/table"
+         hx-trigger="keyup changed delay:300ms"
+         hx-target="#tabla"
+         hx-include="#phone,#fecha_desde,#fecha_hasta,#estado">
+  
+  <input id="fecha_desde" type="date" name="fecha_desde" placeholder="Desde"
+         hx-get="/app/integraciones/whatsapp/table"
+         hx-trigger="change"
+         hx-target="#tabla"
+         hx-include="#phone,#fecha_desde,#fecha_hasta,#estado">
+  
+  <input id="fecha_hasta" type="date" name="fecha_hasta" placeholder="Hasta"
+         hx-get="/app/integraciones/whatsapp/table"
+         hx-trigger="change"
+         hx-target="#tabla"
+         hx-include="#phone,#fecha_desde,#fecha_hasta,#estado">
+  
+  <select id="estado" name="estado" placeholder="Estado"
+          hx-get="/app/integraciones/whatsapp/table"
+          hx-trigger="change"
+          hx-target="#tabla"
+          hx-include="#phone,#fecha_desde,#fecha_hasta,#estado">
+    <option value="">Todos</option>
+    <option value="cotización">Cotización</option>
+    <option value="venta">Venta</option>
+    <option value="error">Error</option>
+  </select>
+</div>
+
+<div id="tabla">
+  {% include "integrations/whatsapp/table.html" %}
+</div>
+{% endblock %}
+
+

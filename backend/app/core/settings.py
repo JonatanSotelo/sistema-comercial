@@ -43,6 +43,11 @@ class Settings(BaseSettings):
     
     # Monitoreo
     SENTRY_DSN: str | None = None
+    
+    # Integración WhatsApp
+    WHATS_ORDERS_TOKEN: str | None = None
+    WHATS_DEFAULT_PRICE_SOURCE: str = "name"  # name|producto|lista
+    WHATS_FUZZY_MATCH: bool = True
 
     model_config = SettingsConfigDict(
         env_file=".env",

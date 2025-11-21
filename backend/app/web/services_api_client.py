@@ -16,6 +16,32 @@ class ApiClient:
             headers["Authorization"] = f"Bearer {self.token}"
         return headers
 
+    def _raise_for_status(self, response: httpx.Response) -> None:
+        if response.status_code < 400:
+            return
+        message = response.reason_phrase
+        try:
+            payload = response.json()
+            detail = payload.get("detail") if isinstance(payload, dict) else None
+            if detail:
+                message = detail
+        except Exception:
+            pass
+        raise httpx.HTTPStatusError(message, request=response.request, response=response)
+
+    @staticmethod
+    def _normalize_page(data: Any, page: int, size: int) -> Dict[str, Any]:
+        if isinstance(data, dict) and "items" in data:
+            return data
+        if isinstance(data, list):
+            return {
+                "items": data,
+                "total": len(data),
+                "page": page,
+                "size": size,
+            }
+        return {"items": [], "total": 0, "page": page, "size": size}
+
     async def login(self, username: str, password: str) -> Optional[str]:
         # Intento 1: /auth/login con payload JSON
         try:
@@ -543,3 +569,270 @@ class ApiClient:
 
             response.raise_for_status()
             return response.json()
+
+    # --- Ventas / Compras ---
+
+    async def list_ventas(self, q: str = "", page: int = 1, size: int = 20) -> Dict[str, Any]:
+        params: Dict[str, Any] = {"page": page, "per_page": size}
+        if q:
+            params["search"] = q
+        url = f"{self.base_url}/ventas"
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url, params=params, headers=self._headers(), timeout=30)
+            self._raise_for_status(response)
+            data = response.json()
+            return self._normalize_page(data, page, size)
+
+    async def create_venta(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        url = f"{self.base_url}/ventas"
+        async with httpx.AsyncClient() as client:
+            response = await client.post(url, json=data, headers=self._headers(), timeout=30)
+            self._raise_for_status(response)
+            return response.json()
+
+    async def list_compras(self, q: str = "", page: int = 1, size: int = 20) -> Dict[str, Any]:
+        params: Dict[str, Any] = {"page": page, "per_page": size}
+        if q:
+            params["search"] = q
+        url = f"{self.base_url}/compras"
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url, params=params, headers=self._headers(), timeout=30)
+            self._raise_for_status(response)
+            data = response.json()
+            return self._normalize_page(data, page, size)
+
+    async def create_compra(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        url = f"{self.base_url}/compras"
+        async with httpx.AsyncClient() as client:
+            response = await client.post(url, json=data, headers=self._headers(), timeout=30)
+            self._raise_for_status(response)
+            return response.json()
+
+    async def search_clientes(self, q: str = "", size: int = 5) -> List[Dict[str, Any]]:
+        params: Dict[str, Any] = {"page": 1, "size": size}
+        if q:
+            params["search"] = q
+        url = f"{self.base_url}/clientes"
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url, params=params, headers=self._headers(), timeout=30)
+            self._raise_for_status(response)
+            data = response.json()
+            page_data = self._normalize_page(data, 1, size)
+            return page_data.get("items", [])
+
+    async def search_proveedores(self, q: str = "", size: int = 5) -> List[Dict[str, Any]]:
+        params: Dict[str, Any] = {"page": 1, "size": size}
+        if q:
+            params["search"] = q
+        url = f"{self.base_url}/proveedores"
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url, params=params, headers=self._headers(), timeout=30)
+            self._raise_for_status(response)
+            data = response.json()
+            page_data = self._normalize_page(data, 1, size)
+            return page_data.get("items", [])
+
+    async def search_productos(self, q: str = "", size: int = 5) -> List[Dict[str, Any]]:
+        params: Dict[str, Any] = {"page": 1, "size": size}
+        if q:
+            params["search"] = q
+        url = f"{self.base_url}/productos"
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url, params=params, headers=self._headers(), timeout=30)
+            self._raise_for_status(response)
+            data = response.json()
+            page_data = self._normalize_page(data, 1, size)
+            return page_data.get("items", [])
+
+    async def list_audit_logs(
+        self,
+        q: str = "",
+        page: int = 1,
+        size: int = 20,
+        fecha_desde: Optional[str] = None,
+        fecha_hasta: Optional[str] = None,
+        table_name: Optional[str] = None,
+        action: Optional[str] = None,
+        username: Optional[str] = None,
+        record_id: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        params: Dict[str, Any] = {"page": page, "size": size}
+        if q:
+            params["search"] = q
+        if fecha_desde:
+            params["fecha_desde"] = fecha_desde
+        if fecha_hasta:
+            params["fecha_hasta"] = fecha_hasta
+        if table_name:
+            params["table_name"] = table_name
+        if action:
+            params["action"] = action
+        if username:
+            params["username"] = username
+        if record_id:
+            params["record_id"] = record_id
+        
+        url = f"{self.base_url}/audit-logs"
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url, params=params, headers=self._headers(), timeout=30)
+            self._raise_for_status(response)
+            data = response.json()
+            return self._normalize_page(data, page, size)
+
+    async def get_reporte_ventas(
+        self,
+        desde: Optional[str] = None,
+        hasta: Optional[str] = None,
+        group_by: str = "dia",
+    ) -> Dict[str, Any]:
+        params: Dict[str, Any] = {"group_by": group_by}
+        if desde:
+            params["desde"] = desde
+        if hasta:
+            params["hasta"] = hasta
+        
+        url = f"{self.base_url}/reportes/ventas"
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url, params=params, headers=self._headers(), timeout=30)
+            self._raise_for_status(response)
+            return response.json()
+
+    async def get_reporte_compras(
+        self,
+        desde: Optional[str] = None,
+        hasta: Optional[str] = None,
+        group_by: str = "dia",
+    ) -> Dict[str, Any]:
+        params: Dict[str, Any] = {"group_by": group_by}
+        if desde:
+            params["desde"] = desde
+        if hasta:
+            params["hasta"] = hasta
+        
+        url = f"{self.base_url}/reportes/compras"
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url, params=params, headers=self._headers(), timeout=30)
+            self._raise_for_status(response)
+            return response.json()
+
+    async def list_backups(self) -> Dict[str, Any]:
+        url = f"{self.base_url}/backups/list"
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url, headers=self._headers(), timeout=30)
+            self._raise_for_status(response)
+            return response.json()
+
+    async def create_backup(self) -> Dict[str, Any]:
+        url = f"{self.base_url}/backups/create"
+        async with httpx.AsyncClient() as client:
+            response = await client.post(url, headers=self._headers(), timeout=300)  # 5 min timeout
+            self._raise_for_status(response)
+            return response.json()
+
+    async def export_clientes(self, fmt: str = "csv") -> bytes:
+        url = f"{self.base_url}/clientes/export"
+        params = {"format": fmt}
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url, params=params, headers=self._headers(), timeout=None)
+            self._raise_for_status(response)
+            return response.content
+
+    async def export_proveedores(self, fmt: str = "csv") -> bytes:
+        url = f"{self.base_url}/proveedores/export"
+        params = {"format": fmt}
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url, params=params, headers=self._headers(), timeout=None)
+            self._raise_for_status(response)
+            return response.content
+
+    async def import_clientes(self, file_content: bytes, filename: str, dry_run: bool = True) -> Dict[str, Any]:
+        url = f"{self.base_url}/clientes/import?dry_run={'true' if dry_run else 'false'}"
+        files = {"file": (filename, file_content, "text/csv" if filename.endswith(".csv") else "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")}
+        async with httpx.AsyncClient() as client:
+            response = await client.post(url, files=files, headers={k: v for k, v in self._headers().items() if k.lower() != "content-type"}, timeout=60)
+            self._raise_for_status(response)
+            return response.json()
+
+    async def import_proveedores(self, file_content: bytes, filename: str, dry_run: bool = True) -> Dict[str, Any]:
+        url = f"{self.base_url}/proveedores/import?dry_run={'true' if dry_run else 'false'}"
+        files = {"file": (filename, file_content, "text/csv" if filename.endswith(".csv") else "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")}
+        async with httpx.AsyncClient() as client:
+            response = await client.post(url, files=files, headers={k: v for k, v in self._headers().items() if k.lower() != "content-type"}, timeout=60)
+            self._raise_for_status(response)
+            return response.json()
+
+    async def import_productos(self, file_content: bytes, filename: str, dry_run: bool = True) -> Dict[str, Any]:
+        url = f"{self.base_url}/productos/import?dry_run={'true' if dry_run else 'false'}"
+        files = {"file": (filename, file_content, "text/csv" if filename.endswith(".csv") else "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")}
+        async with httpx.AsyncClient() as client:
+            response = await client.post(url, files=files, headers={k: v for k, v in self._headers().items() if k.lower() != "content-type"}, timeout=60)
+            self._raise_for_status(response)
+            return response.json()
+
+    # --- Pedidos ---
+
+    async def list_pedidos(
+        self,
+        q: str = "",
+        page: int = 1,
+        size: int = 20,
+        estado: Optional[str] = None,
+        cliente_id: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        params: Dict[str, Any] = {"page": page, "size": size}
+        if q:
+            params["q"] = q
+        if estado:
+            params["estado"] = estado
+        if cliente_id:
+            params["cliente_id"] = cliente_id
+        
+        url = f"{self.base_url}/pedidos"
+        async with httpx.AsyncClient() as client:
+            r = await client.get(url, params=params, headers=self._headers(), timeout=30)
+            r.raise_for_status()
+            data = r.json()
+            return self._normalize_page(data, page, size)
+
+    async def get_pedido(self, pedido_id: int) -> Dict[str, Any]:
+        url = f"{self.base_url}/pedidos/{pedido_id}"
+        async with httpx.AsyncClient() as client:
+            r = await client.get(url, headers=self._headers(), timeout=30)
+            r.raise_for_status()
+            return r.json()
+
+    async def create_pedido(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        url = f"{self.base_url}/pedidos"
+        async with httpx.AsyncClient() as client:
+            r = await client.post(url, json=data, headers=self._headers(), timeout=30)
+            r.raise_for_status()
+            return r.json()
+
+    async def update_pedido(self, pedido_id: int, data: Dict[str, Any]) -> Dict[str, Any]:
+        url = f"{self.base_url}/pedidos/{pedido_id}"
+        async with httpx.AsyncClient() as client:
+            r = await client.put(url, json=data, headers=self._headers(), timeout=30)
+            r.raise_for_status()
+            return r.json()
+
+    async def change_pedido_estado(self, pedido_id: int, data: Dict[str, Any]) -> Dict[str, Any]:
+        url = f"{self.base_url}/pedidos/{pedido_id}/estado"
+        async with httpx.AsyncClient() as client:
+            r = await client.post(url, json=data, headers=self._headers(), timeout=30)
+            r.raise_for_status()
+            return r.json()
+
+    async def facturar_pedido(self, pedido_id: int) -> Dict[str, Any]:
+        url = f"{self.base_url}/pedidos/{pedido_id}/facturar"
+        async with httpx.AsyncClient() as client:
+            r = await client.post(url, headers=self._headers(), timeout=30)
+            r.raise_for_status()
+            return r.json()
+
+    async def _call_bulk_change_estado(self, pedido_ids: list[int], nuevo_estado: str) -> Dict[str, Any]:
+        url = f"{self.base_url}/pedidos/bulk_estado"
+        payload = {"pedido_ids": pedido_ids, "nuevo_estado": nuevo_estado}
+        async with httpx.AsyncClient() as client:
+            r = await client.post(url, json=payload, headers=self._headers(), timeout=30)
+            r.raise_for_status()
+            return r.json()

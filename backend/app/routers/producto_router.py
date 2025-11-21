@@ -4,9 +4,10 @@ from __future__ import annotations
 from io import BytesIO
 from typing import List, Sequence, Union
 
-from fastapi import APIRouter, Depends, HTTPException, status, Response
+from fastapi import APIRouter, Depends, HTTPException, status, Response, UploadFile, File, Query
 from sqlalchemy import select, func, or_
 from sqlalchemy.orm import Session
+from typing import Dict, Any, List
 
 from app.core.deps import get_current_user, require_admin, common_params, CommonQueryParams
 from app.db.database import get_db
@@ -14,6 +15,10 @@ from app.models.producto_model import Producto
 from app.schemas.producto_schema import (
     ProductoCreate, ProductoUpdate, ProductoOut, ProductoPageOut
 )
+from app.services.import_export_service import (
+    parse_import_file, normalize_producto_row
+)
+from app.services.stock_reservations_service import get_disponible_for_productos
 
 try:
     from openpyxl import Workbook
@@ -88,7 +93,15 @@ def listar(q: CommonQueryParams = Depends(common_params), db: Session = Depends(
     legacy_mode = q.page is None and q.size is None and q.search is None and q.sort is None
     if legacy_mode:
         items: Sequence[Producto] = db.scalars(base_stmt.order_by(*order_by)).all()
-        return [ProductoOut.model_validate(x) for x in items]
+        productos_out = [ProductoOut.model_validate(x) for x in items]
+        
+        # Agregar disponible a cada producto
+        producto_ids = [p.id for p in productos_out]
+        disponibles = get_disponible_for_productos(db, producto_ids)
+        for p in productos_out:
+            p.disponible = disponibles.get(p.id, float(p.stock))
+        
+        return productos_out
 
     page = q.page or 1
     size = q.size or 20
@@ -96,25 +109,30 @@ def listar(q: CommonQueryParams = Depends(common_params), db: Session = Depends(
 
     stmt = base_stmt.order_by(*order_by).offset((page - 1) * size).limit(size)
     items_page: Sequence[Producto] = db.scalars(stmt).all()
+    productos_out = [ProductoOut.model_validate(x) for x in items_page]
+    
+    # Agregar disponible a cada producto
+    producto_ids = [p.id for p in productos_out]
+    disponibles = get_disponible_for_productos(db, producto_ids)
+    for p in productos_out:
+        p.disponible = disponibles.get(p.id, float(p.stock))
 
     return ProductoPageOut(
-        items=[ProductoOut.model_validate(x) for x in items_page],
+        items=productos_out,
         total=total,
         page=page,
         size=size,
     )
 
 # -------------------------
-# Exportar a Excel
+# Exportar a CSV/XLSX
 # -------------------------
 @router.get("/export", dependencies=[Depends(get_current_user)])
-def exportar_excel(q: CommonQueryParams = Depends(common_params), db: Session = Depends(get_db)):
-    if Workbook is None:
-        raise HTTPException(
-            status_code=500,
-            detail="Falta dependencia 'openpyxl'. Instalala en la imagen/entorno del backend."
-        )
-
+def exportar(
+    format: str = Query("xlsx", regex="^(csv|xlsx)$"),
+    q: CommonQueryParams = Depends(common_params),
+    db: Session = Depends(get_db),
+):
     # Reutilizamos filtros/orden
     filters = []
     sf = _build_search_filter(q.search)
@@ -126,38 +144,143 @@ def exportar_excel(q: CommonQueryParams = Depends(common_params), db: Session = 
         select(Producto).where(*filters).order_by(*order_by)
     ).all()
 
-    # Armar Excel
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "Productos"
-
-    # Encabezados
-    headers = ["ID", "Nombre", "Descripción", "Código", "Categoría", "Precio", "Costo", "Stock", "Stock Mínimo", "Activo"]
-    ws.append(headers)
-
+    # Encabezados (sin "Activo", con proveedor_id)
+    headers = ["ID", "Nombre", "Precio", "Stock", "Proveedor_ID"]
+    rows = []
     for p in items:
-        ws.append([
+        rows.append([
             getattr(p, "id", None),
             getattr(p, "nombre", None),
-            getattr(p, "descripcion", None),
-            getattr(p, "codigo", None),
-            getattr(p, "categoria", None),
             float(getattr(p, "precio", 0.0)) if getattr(p, "precio", None) is not None else None,
-            float(getattr(p, "costo", 0.0)) if getattr(p, "costo", None) is not None else None,
-            getattr(p, "stock", None),
-            getattr(p, "stock_minimo", None),
-            "Sí" if getattr(p, "activo", True) else "No",
+            float(getattr(p, "stock", 0.0)) if getattr(p, "stock", None) is not None else None,
+            getattr(p, "proveedor_id", None),
         ])
 
-    buf = BytesIO()
-    wb.save(buf)
-    buf.seek(0)
+    if format == "csv":
+        from io import StringIO
+        import csv
+        output = StringIO()
+        writer = csv.writer(output)
+        writer.writerow(headers)
+        writer.writerows(rows)
+        output.seek(0)
+        return Response(
+            content=output.getvalue().encode("utf-8-sig"),
+            media_type="text/csv",
+            headers={"Content-Disposition": 'attachment; filename="productos.csv"'},
+        )
+    else:  # xlsx
+        if Workbook is None:
+            raise HTTPException(
+                status_code=500,
+                detail="Falta dependencia 'openpyxl'. Instalala en la imagen/entorno del backend."
+            )
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Productos"
+        ws.append(headers)
+        for row in rows:
+            ws.append(row)
+        buf = BytesIO()
+        wb.save(buf)
+        buf.seek(0)
+        return Response(
+            content=buf.read(),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": 'attachment; filename="productos.xlsx"'},
+        )
 
-    return Response(
-        content=buf.read(),
-        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": 'attachment; filename="productos.xlsx"'},
-    )
+# -------------------------
+# Import CSV/XLSX
+# -------------------------
+@router.post("/import", dependencies=[Depends(require_admin)])
+async def importar(
+    file: UploadFile = File(...),
+    dry_run: bool = Query(True, description="Si true, solo muestra preview sin ejecutar"),
+    db: Session = Depends(get_db),
+):
+    """Importa productos desde CSV o XLSX con dry_run para preview"""
+    try:
+        file_content = await file.read()
+        headers, rows = parse_import_file(file_content, file.filename or "")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Error al parsear archivo: {e}")
+    
+    insertados = 0
+    actualizados = 0
+    errores: List[Dict[str, Any]] = []
+    sample_rows: List[Dict[str, Any]] = []
+    
+    for idx, row in enumerate(rows, start=2):  # Empezar en 2 (header es fila 1)
+        try:
+            normalized = normalize_producto_row(row)
+            
+            # Validar nombre requerido
+            if not normalized.get("nombre"):
+                errores.append({
+                    "fila": idx,
+                    "error": "Nombre es requerido",
+                    "datos": row,
+                })
+                continue
+            
+            # Upsert por nombre (y opcionalmente proveedor_id)
+            nombre = normalized["nombre"]
+            proveedor_id = normalized.get("proveedor_id")
+            
+            existing = None
+            if proveedor_id:
+                existing = db.query(Producto).filter(
+                    Producto.nombre == nombre,
+                    Producto.proveedor_id == proveedor_id
+                ).first()
+            else:
+                existing = db.query(Producto).filter(Producto.nombre == nombre).first()
+            
+            if existing:
+                # Update
+                if dry_run:
+                    actualizados += 1
+                else:
+                    for k, v in normalized.items():
+                        if k != "nombre":  # No actualizar nombre (es la clave)
+                            setattr(existing, k, v)
+                    db.add(existing)
+                    actualizados += 1
+            else:
+                # Insert
+                if dry_run:
+                    insertados += 1
+                else:
+                    producto_data = ProductoCreate(**normalized)
+                    obj = Producto(**producto_data.model_dump())
+                    db.add(obj)
+                    insertados += 1
+            
+            # Agregar a muestra (primeros 5)
+            if len(sample_rows) < 5:
+                sample_rows.append({
+                    "fila": idx,
+                    "accion": "actualizar" if existing else "insertar",
+                    "datos": normalized,
+                })
+        
+        except Exception as e:
+            errores.append({
+                "fila": idx,
+                "error": str(e),
+                "datos": row,
+            })
+    
+    if not dry_run:
+        db.commit()
+    
+    return {
+        "insertados": insertados,
+        "actualizados": actualizados,
+        "errores": errores[:10],  # Limitar a 10 errores
+        "sample_rows": sample_rows,
+    }
 
 # -------------------------
 # Detalle
@@ -167,11 +290,19 @@ def obtener(prod_id: int, db: Session = Depends(get_db)):
     obj = db.get(Producto, prod_id)
     if not obj:
         raise HTTPException(status_code=404, detail="Producto no encontrado")
-    return ProductoOut.model_validate(obj)
+    producto_out = ProductoOut.model_validate(obj)
+    
+    # Agregar disponible
+    from app.services.stock_reservations_service import get_disponible_for_producto
+    producto_out.disponible = get_disponible_for_producto(db, prod_id)
+    
+    return producto_out
 
 # -------------------------
 # Escritura (solo admin)
 # -------------------------
+@router.post("", response_model=ProductoOut, status_code=status.HTTP_201_CREATED,
+             dependencies=[Depends(require_admin)])
 @router.post("/", response_model=ProductoOut, status_code=status.HTTP_201_CREATED,
              dependencies=[Depends(require_admin)])
 def crear(data: ProductoCreate, db: Session = Depends(get_db)):

@@ -16,7 +16,7 @@ class Compra(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
-    proveedor = relationship("Proveedor")  # lazy simple
+    proveedor = relationship("Proveedor", back_populates="compras")
     items = relationship("CompraItem", cascade="all, delete-orphan", back_populates="compra")
 
 class CompraItem(Base):

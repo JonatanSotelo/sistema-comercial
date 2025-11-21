@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Compras</h1>
+
+<div class="search">
+  <input id="compras-q" type="search" placeholder="Buscar..." name="q"
+         hx-get="/app/compras/table"
+         hx-trigger="keyup changed delay:300ms"
+         hx-target="#tabla"
+         hx-include="#compras-q,#compras-size">
+  <select id="compras-size" name="size"
+          hx-get="/app/compras/table"
+          hx-trigger="change"
+          hx-target="#tabla"
+          hx-include="#compras-q,#compras-size">
+    <option value="10">10</option>
+    <option value="20" selected>20</option>
+    <option value="50">50</option>
+  </select>
+  <button class="btn"
+          hx-get="/app/compras/form/new"
+          hx-target="#form-container"
+          hx-swap="innerHTML">Nueva Compra</button>
+</div>
+
+<div id="form-container"></div>
+
+<div id="tabla" hx-get="/app/compras/table" hx-trigger="load">
+  Cargando…
+</div>
+{% endblock %}
+

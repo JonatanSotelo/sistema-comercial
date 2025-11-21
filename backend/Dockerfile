@@ -2,7 +2,11 @@ FROM python:3.11-slim
 
 # Zona horaria
 ENV TZ=America/Argentina/Buenos_Aires
-RUN apt-get update && apt-get install -y --no-install-recommends tzdata && rm -rf /var/lib/apt/lists/*
+# Instalar tzdata y postgresql-client (para pg_dump en backups)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    tzdata \
+    postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 

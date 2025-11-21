@@ -1,5 +1,5 @@
 
-from fastapi import APIRouter, Request, Query, HTTPException, Form
+from fastapi import APIRouter, Request, Query, HTTPException, Form, UploadFile, File
 from fastapi.responses import StreamingResponse
 from fastapi.templating import Jinja2Templates
 from .deps import get_api
@@ -63,6 +63,43 @@ async def productos_export(request: Request, format: str = "csv"):
     media = "text/csv" if format == "csv" else "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     filename = f"productos.{format}"
     return StreamingResponse(iter([content]), media_type=media, headers={"Content-Disposition": f'attachment; filename="{filename}"'})
+
+@router.post("/productos/import-action")
+async def productos_import_action(
+    request: Request,
+    file: UploadFile = File(...),
+    dry_run: bool = Query(True),
+):
+    api = get_api(request)
+    file_content = await file.read()
+    try:
+        result = await api.import_productos(file_content, file.filename or "file.csv", dry_run=dry_run)
+        if dry_run:
+            # Mostrar preview
+            return templates.TemplateResponse(
+                "products/_import_preview.html",
+                {
+                    "request": request,
+                    "insertados": result.get("insertados", 0),
+                    "actualizados": result.get("actualizados", 0),
+                    "errores": result.get("errores", []),
+                    "sample_rows": result.get("sample_rows", []),
+                },
+            )
+        else:
+            # Import exitoso, refrescar tabla y limpiar preview
+            data = await api.list_productos(page=1, size=20)
+            items = data.get("items", [])
+            total = data.get("total", 0)
+            response = templates.TemplateResponse(
+                "products/_table.html",
+                {"request": request, "items": items, "total": total, "page": 1, "size": 20, "q": ""},
+            )
+            # OOB clear del import container
+            response.headers["HX-Trigger"] = "refreshTable,clearImport"
+            return response
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 @router.get("/productos/form/new")
 async def productos_form_new(request: Request):
