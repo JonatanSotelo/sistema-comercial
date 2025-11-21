@@ -12,6 +12,7 @@ from app.models.notificacion_model import Notificacion
 from app.models.permiso_model import Role, Permission
 from app.models.pedido_model import Pedido, PedidoItem
 from app.models.stock_reservation_model import StockReservation
+from app.models.factura_model import Factura, FacturaItem  # v0.9.0+
 
 __all__ = [
     "Base",
@@ -30,4 +31,6 @@ __all__ = [
     "Pedido",
     "PedidoItem",
     "StockReservation",
+    "Factura",  # v0.9.0+
+    "FacturaItem",  # v0.9.0+
 ]

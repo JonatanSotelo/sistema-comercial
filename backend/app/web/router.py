@@ -12,6 +12,7 @@ from .reports_ui import router as reports_router
 from .backups_ui import router as backups_router
 from .integrations_whatsapp_ui import router as integrations_whatsapp_router
 from .pedidos_ui import router as pedidos_router
+from .facturacion_ui import router as facturacion_router  # v0.9.0
 
 router = APIRouter()
 router.include_router(auth_router, prefix="/app", tags=["ui-auth"])
@@ -26,3 +27,4 @@ router.include_router(reports_router, prefix="", tags=["ui-reportes"])
 router.include_router(backups_router, prefix="", tags=["ui-backups"])
 router.include_router(integrations_whatsapp_router, prefix="", tags=["ui-integraciones"])
 router.include_router(pedidos_router, prefix="/app", tags=["ui-pedidos"])
+router.include_router(facturacion_router, prefix="", tags=["ui-facturacion"])  # v0.9.0

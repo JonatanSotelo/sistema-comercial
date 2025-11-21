@@ -34,6 +34,11 @@
         <td>{{ "%.2f"|format(v.get("total", 0)) }}</td>
         <td>
           <button class="btn" type="button">Ver</button>
+          <a href="/facturacion/emitir?venta_id={{ v.get('id') }}" 
+             class="btn btn-sm btn-success" 
+             title="Emitir Factura AFIP">
+            📄 Facturar
+          </a>
         </td>
       </tr>
     {% endfor %}

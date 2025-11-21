@@ -26,7 +26,7 @@ class Pedido(Base):
     telefono = Column(String, nullable=True)
     nota = Column(Text, nullable=True)
     total = Column(Numeric(12, 2), default=0, nullable=False)
-    created_by = Column(Integer, ForeignKey("usuarios.id", ondelete="SET NULL"), nullable=True)
+    created_by = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     external_ref = Column(String, nullable=True)
     venta_id = Column(Integer, ForeignKey("ventas.id", ondelete="SET NULL"), nullable=True)  # v0.8.0: link a venta
     
@@ -39,6 +39,9 @@ class Pedido(Base):
     )
     created_by_user = relationship("User", foreign_keys=[created_by])
     venta = relationship("Venta", foreign_keys=[venta_id])
+    
+    # Relación con Facturas (v0.9.0+)
+    facturas = relationship("Factura", back_populates="pedido", cascade="all, delete-orphan")
 
 
 class PedidoItem(Base):

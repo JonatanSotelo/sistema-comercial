@@ -226,8 +226,29 @@ if [ -n "$TOKEN" ]; then
     test "$code" = "200" -o "$code" = "404"
   fi
   
+  # Facturación AFIP (v0.9.0)
+  echo "[FAC1] GET /app/facturacion"
+  code=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/app/facturacion")
+  test "$code" = "200" -o "$code" = "302"
+  
+  echo "[FAC2] GET /app/facturacion/table (HTMX partial)"
+  code=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/app/facturacion/table" -H "Cookie: access_token=$TOKEN")
+  test "$code" = "200" -o "$code" = "401"
+  
+  echo "[FAC3] GET /facturacion (API list facturas)"
+  code=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/facturacion" -H "Authorization: Bearer $TOKEN")
+  test "$code" = "200" -o "$code" = "401"
+  
+  echo "[FAC4] GET /reportes/libro-iva-ventas?desde=2025-01-01&hasta=2025-12-31&format=csv"
+  code=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/reportes/libro-iva-ventas?desde=2025-01-01&hasta=2025-12-31&format=csv" -H "Authorization: Bearer $TOKEN")
+  test "$code" = "200" -o "$code" = "401" -o "$code" = "400"
+  
+  echo "[FAC5] GET /facturas/1/pdf (puede no existir)"
+  code=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/facturacion/1/pdf" -H "Authorization: Bearer $TOKEN")
+  test "$code" = "200" -o "$code" = "404" -o "$code" = "401"
+
 else
-  echo "[P4-R9+N+PDF] SKIP: No se pudo obtener token de autenticación"
+  echo "[P4-R9+N+PDF+FAC] SKIP: No se pudo obtener token de autenticación"
 fi
 
 echo "OK smoke"

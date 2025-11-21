@@ -836,3 +836,42 @@ class ApiClient:
             r = await client.post(url, json=payload, headers=self._headers(), timeout=30)
             r.raise_for_status()
             return r.json()
+
+    # Facturación (v0.9.0+)
+    async def list_facturas(self, params: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
+        url = f"{self.base_url}/facturacion"
+        async with httpx.AsyncClient() as client:
+            r = await client.get(url, params=params or {}, headers=self._headers(), timeout=30)
+            r.raise_for_status()
+            return r.json()
+
+    async def emitir_factura_afip(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        url = f"{self.base_url}/facturacion/emitir"
+        async with httpx.AsyncClient() as client:
+            r = await client.post(url, json=data, headers=self._headers(), timeout=60)
+            r.raise_for_status()
+            return r.json()
+
+
+# Helper functions for UI (cookie-based auth via forwarded requests)
+def _get_token_from_request(request: Any) -> Optional[str]:
+    """Extract auth token from request cookies or headers"""
+    if hasattr(request, "cookies"):
+        return request.cookies.get("access_token")
+    return None
+
+
+def listar_facturas(request: Any, params: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
+    """Lista facturas desde la API (sync wrapper)"""
+    import asyncio
+    token = _get_token_from_request(request)
+    client = ApiClient(token=token)
+    return asyncio.run(client.list_facturas(params))
+
+
+def emitir_factura(request: Any, data: Dict[str, Any]) -> Dict[str, Any]:
+    """Emite una factura AFIP desde la API (sync wrapper)"""
+    import asyncio
+    token = _get_token_from_request(request)
+    client = ApiClient(token=token)
+    return asyncio.run(client.emitir_factura_afip(data))

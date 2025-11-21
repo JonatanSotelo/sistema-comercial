@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     # API
     API_BASE_URL: str = "http://localhost:8000"
     SECRET_KEY: str = "dev-secret-change-in-production"
+    ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440
     
     # Backups
     BACKUP_DIR: str = "/data/backups"
@@ -32,6 +34,18 @@ class Settings(BaseSettings):
     SMTP_USER: Optional[str] = None
     SMTP_PASS: Optional[str] = None
     SMTP_FROM: str = "noreply@sistema-comercial.com"
+    
+    # AFIP Facturación (v0.9.0+)
+    AFIP_ENV: str = "homologacion"  # homologacion | produccion
+    AFIP_CUIT: str = "20123456789"
+    AFIP_CERT_PATH: str = "/secrets/afip.crt"
+    AFIP_KEY_PATH: str = "/secrets/afip.key"
+    AFIP_CERT_PASS: Optional[str] = None
+    AFIP_WSDL_WSAA: str = "https://wsaahomo.afip.gov.ar/ws/services/LoginCms?wsdl"
+    AFIP_WSDL_WSFEV1: str = "https://wswhomo.afip.gov.ar/wsfev1/service.asmx?WSDL"
+    FACTURA_PTO_VTA: int = 1
+    FACTURA_MONEDA: str = "ARS"
+    FACTURA_COTIZACION: float = 1.000
     
     class Config:
         env_file = ".env"

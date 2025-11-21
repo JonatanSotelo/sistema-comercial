@@ -402,3 +402,39 @@ def exportar_pedidos(
         from fastapi import HTTPException, status
         raise HTTPException(status_code=400, detail="XLSX requiere openpyxl instalado")
 
+
+@router.get("/libro-iva-ventas")
+def libro_iva_ventas(
+    desde: str = Query(..., description="Fecha desde (YYYY-MM-DD)"),
+    hasta: str = Query(..., description="Fecha hasta (YYYY-MM-DD)"),
+    format: str = Query("csv", regex="^(csv|xlsx)$"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_user),
+):
+    """
+    Genera el Libro IVA Ventas en formato CSV o XLSX.
+    
+    Incluye todas las facturas electrónicas emitidas en el período especificado,
+    con los datos requeridos para la presentación de IVA ante AFIP.
+    
+    - **desde**: Fecha desde (YYYY-MM-DD)
+    - **hasta**: Fecha hasta (YYYY-MM-DD)
+    - **format**: Formato de salida (csv o xlsx)
+    """
+    from app.services.libro_iva_ventas_service import generar_libro_iva_ventas
+    
+    try:
+        archivo_bytes = generar_libro_iva_ventas(db, desde, hasta, format)
+        
+        media_type = "text/csv" if format == "csv" else "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        extension = format
+        
+        return Response(
+            content=archivo_bytes,
+            media_type=media_type,
+            headers={"Content-Disposition": f'attachment; filename="libro_iva_ventas_{desde}_{hasta}.{extension}"'}
+        )
+    except ValueError as e:
+        from fastapi import HTTPException, status
+        raise HTTPException(status_code=400, detail=str(e))
+
