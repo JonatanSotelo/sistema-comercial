@@ -1,0 +1,79 @@
+<div id="tabla">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Fecha</th>
+        <th>Cliente</th>
+        <th>Ítems</th>
+        <th>Total</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for v in items %}
+      <tr>
+        <td>{{ v.get("id") }}</td>
+        <td>{{ v.get("fecha") or v.get("created_at", "") }}</td>
+        <td>
+          {% if v.get("cliente") %}
+            {{ v.get("cliente").get("nombre") or v.get("cliente").get("name") or "" }}
+          {% elif v.get("cliente_id") %}
+            Cliente #{{ v.get("cliente_id") }}
+          {% else %}
+            —
+          {% endif %}
+        </td>
+        <td>
+          {% if v.get("items") %}
+            {{ v.get("items")|length }} ítem(s)
+          {% else %}
+            0
+          {% endif %}
+        </td>
+        <td>{{ "%.2f"|format(v.get("total", 0)) }}</td>
+        <td>
+          <button class="btn" type="button">Ver</button>
+          <button class="btn btn-sm btn-primary"
+                  hx-get="/app/cobros/form-cobrar/{{ v.get('id') }}"
+                  hx-target="#form-container"
+                  title="Cobrar venta">
+            💰 Cobrar
+          </button>
+          <a href="/facturacion/emitir?venta_id={{ v.get('id') }}" 
+             class="btn btn-sm btn-success" 
+             title="Emitir Factura AFIP">
+            📄 Facturar
+          </a>
+        </td>
+      </tr>
+    {% endfor %}
+    {% if not items %}
+      <tr><td colspan="6" class="muted">Sin resultados</td></tr>
+    {% endif %}
+    </tbody>
+  </table>
+
+  <div class="search">
+    <span class="muted">Total: {{ total }}</span>
+    <div class="right">
+      {% if page > 1 %}
+        <button class="btn"
+                hx-get="/app/ventas/table?page={{ page-1 }}&size={{ size }}&q={{ q|default('') }}"
+                hx-target="#tabla"
+                hx-swap="outerHTML">&larr; Anterior</button>
+      {% endif %}
+      {% if (page*size) < total %}
+        <button class="btn"
+                hx-get="/app/ventas/table?page={{ page+1 }}&size={{ size }}&q={{ q|default('') }}"
+                hx-target="#tabla"
+                hx-swap="outerHTML">Siguiente &rarr;</button>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if oob_clear %}
+    <div id="form-container" hx-swap-oob="true"></div>
+  {% endif %}
+</div>
+

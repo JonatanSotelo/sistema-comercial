@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}Facturación AFIP{% endblock %}
+
+{% block content %}
+<div class="container">
+  <h1>Facturación Electrónica AFIP</h1>
+  <p class="text-muted">Gestión de facturas electrónicas A, B y C</p>
+  
+  <div class="card">
+    <div class="card-body">
+      <!-- Filtros -->
+      <div class="row mb-3">
+        <div class="col-md-3">
+          <label>Fecha Desde</label>
+          <input type="date" class="form-control" id="fecha_desde">
+        </div>
+        <div class="col-md-3">
+          <label>Fecha Hasta</label>
+          <input type="date" class="form-control" id="fecha_hasta">
+        </div>
+        <div class="col-md-2">
+          <label>Tipo</label>
+          <select class="form-control" id="tipo_cbte">
+            <option value="">Todos</option>
+            <option value="1">A</option>
+            <option value="6">B</option>
+            <option value="11">C</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label>&nbsp;</label>
+          <button class="btn btn-primary form-control" 
+                  hx-get="/app/facturacion/table" 
+                  hx-target="#tabla-container"
+                  hx-include="[id='fecha_desde'],[id='fecha_hasta'],[id='tipo_cbte']">
+            🔍 Buscar
+          </button>
+        </div>
+        <div class="col-md-2">
+          <label>&nbsp;</label>
+          <a href="/reportes/libro-iva-ventas?desde={{ (now() - timedelta(days=30)).strftime('%Y-%m-%d') }}&hasta={{ now().strftime('%Y-%m-%d') }}&format=csv"
+             class="btn btn-success form-control" target="_blank">
+            📊 Libro IVA
+          </a>
+        </div>
+      </div>
+
+      <!-- Tabla de facturas -->
+      <div id="tabla-container" 
+           hx-get="/app/facturacion/table" 
+           hx-trigger="load"
+           hx-swap="innerHTML">
+        <p class="text-center text-muted">Cargando facturas...</p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

@@ -1,0 +1,35 @@
+<div class="flash" style="margin-top:.5rem">
+  <strong>{{ 'Nuevo cliente' if not cliente.id else 'Editar cliente' }}</strong>
+</div>
+
+<form
+  hx-post="{{ '/app/clientes/create' if not cliente.id else ('/app/clientes/update/' ~ cliente.id) }}"
+  hx-target="#clientes-tabla"
+  hx-swap="outerHTML"
+  style="display:grid;grid-template-columns:repeat(2,1fr);gap:.75rem;max-width:700px;margin:.5rem 0 1rem 0"
+>
+  <label>Nombre
+    <input type="text" name="nombre" value="{{ cliente.nombre }}" required>
+  </label>
+  <label>Email
+    <input type="email" name="email" value="{{ cliente.email }}">
+  </label>
+  <label>Teléfono
+    <input type="text" name="telefono" value="{{ cliente.telefono }}">
+  </label>
+  <label>CUIT
+    <input type="text" name="cuit" value="{{ cliente.cuit or cliente.tax_id or cliente.dni or cliente.documento or cliente.id_number or cliente.national_id or cliente.cuil or '' }}">
+  </label>
+
+  <div>
+    <button class="btn" type="submit">{{ 'Crear' if not cliente.id else 'Guardar' }}</button>
+  </div>
+  <div>
+    <button class="btn" type="button"
+            onclick="document.getElementById('clientes-form').innerHTML='';">Cancelar</button>
+  </div>
+
+  {% if error %}
+  <div class="flash error" style="grid-column:1/-1">{{ error }}</div>
+  {% endif %}
+</form>

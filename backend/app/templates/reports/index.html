@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Reportes</h1>
+
+<div style="margin-bottom:1rem">
+  <button class="btn" onclick="mostrarTab('ventas')" id="tab-ventas-btn">Ventas</button>
+  <button class="btn" onclick="mostrarTab('compras')" id="tab-compras-btn">Compras</button>
+</div>
+
+<!-- Tab Ventas -->
+<div id="tab-ventas" style="display:block">
+  <div class="search" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:.5rem;margin-bottom:1rem">
+    <input id="ventas-desde" type="date" name="desde" placeholder="Desde"
+           hx-get="/app/reportes/ventas/table"
+           hx-trigger="change"
+           hx-target="#ventas-tabla"
+           hx-swap="outerHTML"
+           hx-include="#ventas-desde,#ventas-hasta,#ventas-group_by">
+    
+    <input id="ventas-hasta" type="date" name="hasta" placeholder="Hasta"
+           hx-get="/app/reportes/ventas/table"
+           hx-trigger="change"
+           hx-target="#ventas-tabla"
+           hx-swap="outerHTML"
+           hx-include="#ventas-desde,#ventas-hasta,#ventas-group_by">
+    
+    <select id="ventas-group_by" name="group_by"
+            hx-get="/app/reportes/ventas/table"
+            hx-trigger="change"
+            hx-target="#ventas-tabla"
+            hx-swap="outerHTML"
+            hx-include="#ventas-desde,#ventas-hasta,#ventas-group_by">
+      <option value="dia">Por Día</option>
+      <option value="cliente">Por Cliente</option>
+      <option value="producto">Por Producto</option>
+    </select>
+    
+    <a class="btn" id="ventas-export-csv" href="#" onclick="exportarVentas('csv'); return false;">Export CSV</a>
+    <a class="btn" id="ventas-export-xlsx" href="#" onclick="exportarVentas('xlsx'); return false;">Export XLSX</a>
+  </div>
+
+  <div id="ventas-tabla" hx-get="/app/reportes/ventas/table" hx-trigger="load" hx-swap="outerHTML">
+    Cargando…
+  </div>
+</div>
+
+<!-- Tab Compras -->
+<div id="tab-compras" style="display:none">
+  <div class="search" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:.5rem;margin-bottom:1rem">
+    <input id="compras-desde" type="date" name="desde" placeholder="Desde"
+           hx-get="/app/reportes/compras/table"
+           hx-trigger="change"
+           hx-target="#compras-tabla"
+           hx-swap="outerHTML"
+           hx-include="#compras-desde,#compras-hasta,#compras-group_by">
+    
+    <input id="compras-hasta" type="date" name="hasta" placeholder="Hasta"
+           hx-get="/app/reportes/compras/table"
+           hx-trigger="change"
+           hx-target="#compras-tabla"
+           hx-swap="outerHTML"
+           hx-include="#compras-desde,#compras-hasta,#compras-group_by">
+    
+    <select id="compras-group_by" name="group_by"
+            hx-get="/app/reportes/compras/table"
+            hx-trigger="change"
+            hx-target="#compras-tabla"
+            hx-swap="outerHTML"
+            hx-include="#compras-desde,#compras-hasta,#compras-group_by">
+      <option value="dia">Por Día</option>
+      <option value="proveedor">Por Proveedor</option>
+      <option value="producto">Por Producto</option>
+    </select>
+    
+    <a class="btn" id="compras-export-csv" href="#" onclick="exportarCompras('csv'); return false;">Export CSV</a>
+    <a class="btn" id="compras-export-xlsx" href="#" onclick="exportarCompras('xlsx'); return false;">Export XLSX</a>
+  </div>
+
+  <div id="compras-tabla" hx-get="/app/reportes/compras/table" hx-trigger="load" hx-swap="outerHTML">
+    Cargando…
+  </div>
+</div>
+
+<script>
+function mostrarTab(tab) {
+  // Ocultar todos los tabs
+  document.getElementById('tab-ventas').style.display = 'none';
+  document.getElementById('tab-compras').style.display = 'none';
+  
+  // Remover estilos de botones
+  document.getElementById('tab-ventas-btn').style.background = '#f8f8f8';
+  document.getElementById('tab-compras-btn').style.background = '#f8f8f8';
+  
+  // Mostrar tab seleccionado
+  if (tab === 'ventas') {
+    document.getElementById('tab-ventas').style.display = 'block';
+    document.getElementById('tab-ventas-btn').style.background = '#e0e0e0';
+  } else if (tab === 'compras') {
+    document.getElementById('tab-compras').style.display = 'block';
+    document.getElementById('tab-compras-btn').style.background = '#e0e0e0';
+  }
+}
+
+function exportarVentas(format) {
+  const desde = document.getElementById('ventas-desde').value || '';
+  const hasta = document.getElementById('ventas-hasta').value || '';
+  const group_by = document.getElementById('ventas-group_by').value || 'dia';
+  
+  const params = new URLSearchParams();
+  if (desde) params.append('desde', desde);
+  if (hasta) params.append('hasta', hasta);
+  params.append('group_by', group_by);
+  params.append('format', format);
+  
+  window.location.href = `/reportes/ventas/export?${params.toString()}`;
+}
+
+function exportarCompras(format) {
+  const desde = document.getElementById('compras-desde').value || '';
+  const hasta = document.getElementById('compras-hasta').value || '';
+  const group_by = document.getElementById('compras-group_by').value || 'dia';
+  
+  const params = new URLSearchParams();
+  if (desde) params.append('desde', desde);
+  if (hasta) params.append('hasta', hasta);
+  params.append('group_by', group_by);
+  params.append('format', format);
+  
+  window.location.href = `/reportes/compras/export?${params.toString()}`;
+}
+
+// Actualizar links de export cuando cambian los filtros
+document.addEventListener('htmx:afterSwap', function(event) {
+  if (event.detail.target.id === 'ventas-tabla' || event.detail.target.id === 'compras-tabla') {
+    // Actualizar links de export dinámicamente
+    const desde = document.getElementById(event.detail.target.id.replace('-tabla', '-desde')).value || '';
+    const hasta = document.getElementById(event.detail.target.id.replace('-tabla', '-hasta')).value || '';
+    const group_by = document.getElementById(event.detail.target.id.replace('-tabla', '-group_by')).value || 'dia';
+    
+    const params = new URLSearchParams();
+    if (desde) params.append('desde', desde);
+    if (hasta) params.append('hasta', hasta);
+    params.append('group_by', group_by);
+    
+    if (event.detail.target.id === 'ventas-tabla') {
+      document.getElementById('ventas-export-csv').href = `/reportes/ventas/export?${params.toString()}&format=csv`;
+      document.getElementById('ventas-export-xlsx').href = `/reportes/ventas/export?${params.toString()}&format=xlsx`;
+    } else {
+      document.getElementById('compras-export-csv').href = `/reportes/compras/export?${params.toString()}&format=csv`;
+      document.getElementById('compras-export-xlsx').href = `/reportes/compras/export?${params.toString()}&format=xlsx`;
+    }
+  }
+});
+</script>
+{% endblock %}
+

@@ -1,0 +1,54 @@
+
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ title or "Sistema Comercial" }}</title>
+  <link rel="stylesheet" href="/static/styles.css">
+  <!-- HTMX -->
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  <style>
+    /* utilidades mínimas por si falta styles.css */
+    .container{max-width:1100px;margin:0 auto;padding:1rem;}
+    .navbar{display:flex;gap:.75rem;align-items:center;margin-bottom:1rem;}
+    .btn{padding:.45rem .8rem;border-radius:.5rem;border:1px solid #999;cursor:pointer;background:#f8f8f8}
+    .btn:hover{background:#eee}
+    .table{width:100%;border-collapse:collapse}
+    .table th,.table td{border-bottom:1px solid #ddd;padding:.5rem;text-align:left}
+    .muted{color:#666}
+    .right{margin-left:auto}
+    .badge{font-size:.8rem;border:1px solid #ccc;padding:.1rem .4rem;border-radius:.3rem}
+    .search{display:flex;gap:.5rem;margin:.75rem 0}
+    .flash{padding:.5rem .75rem;border-radius:.5rem;background:#eef7ee;border:1px solid #c9e5c9;margin:.5rem 0}
+    .error{background:#fdecec;border-color:#f5b0b0}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <nav class="navbar">
+      <a class="btn" href="/app/dashboard">Dashboard</a>
+      {% if features.get('productos', True) %}<a class="btn" href="/app/productos">Productos</a>{% endif %}
+      {% if features.get('clientes', True) %}<a class="btn" href="/app/clientes">Clientes</a>{% endif %}
+      {% if features.get('pedidos', True) %}<a class="btn" href="/app/pedidos">Pedidos</a>{% endif %}
+      {% if features.get('facturacion', True) %}<a class="btn" href="/app/facturacion">Facturación</a>{% endif %}
+      {% if features.get('cobros', True) %}<a class="btn" href="/app/cobros">Cobros</a>{% endif %}
+      {% if features.get('iva_compras', True) %}<a class="btn" href="/app/iva-compras">IVA Compras</a>{% endif %}
+      {% if features.get('proveedores', True) %}<a class="btn" href="/app/proveedores">Proveedores</a>{% endif %}
+      {% if features.get('ventas', True) %}<a class="btn" href="/app/ventas">Ventas</a>{% endif %}
+      {% if features.get('compras', True) %}<a class="btn" href="/app/compras">Compras</a>{% endif %}
+      {% if features.get('auditoria', True) %}<a class="btn" href="/app/auditoria">Auditoría</a>{% endif %}
+      {% if features.get('reportes', True) %}<a class="btn" href="/app/reportes">Reportes</a>{% endif %}
+      {% if features.get('backups', True) %}<a class="btn" href="/app/backups">Backups</a>{% endif %}
+      <span class="right muted">Usuario: {{ user or "—" }}</span>
+      <a class="btn" href="/app/logout">Salir</a>
+    </nav>
+
+    {% if flash %}
+      <div class="flash {{ 'error' if flash.type == 'error' else '' }}">{{ flash.message }}</div>
+    {% endif %}
+
+    {% block content %}{% endblock %}
+  </div>
+</body>
+</html>

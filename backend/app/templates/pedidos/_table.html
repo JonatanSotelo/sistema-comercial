@@ -1,0 +1,249 @@
+<div id="tabla">
+  <table class="table">
+    <thead>
+      <tr>
+        <th style="width:40px">
+          <input type="checkbox" id="select-all" onchange="toggleAllCheckboxes(this)">
+        </th>
+        <th>ID</th>
+        <th>Fecha</th>
+        <th>Cliente</th>
+        <th>Ítems</th>
+        <th>Estado</th>
+        <th>Total</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for p in items %}
+      <tr>
+        <td>
+          <input type="checkbox" class="pedido-checkbox" value="{{ p.get('id') }}" 
+                 data-estado="{{ p.get('estado') }}">
+        </td>
+        <td>{{ p.get("id") }}</td>
+        <td>{{ p.get("created_at", "")[:16] if p.get("created_at") else "" }}</td>
+        <td>
+          {% if p.get("cliente") %}
+            {{ p.get("cliente").get("nombre") or p.get("cliente").get("name") or "" }}
+          {% elif p.get("cliente_id") %}
+            Cliente #{{ p.get("cliente_id") }}
+          {% else %}
+            —
+          {% endif %}
+        </td>
+        <td>
+          {% if p.get("items") %}
+            {{ p.get("items")|length }} ítem(s)
+          {% else %}
+            0
+          {% endif %}
+        </td>
+        <td>
+          <span class="badge" style="
+            {% if p.get('estado') == 'NUEVO' %}background:#e3f2fd;border-color:#90caf9{% endif %}
+            {% if p.get('estado') == 'EN_PREPARACION' %}background:#fff3e0;border-color:#ffb74d{% endif %}
+            {% if p.get('estado') == 'LISTO' %}background:#f1f8e9;border-color:#aed581{% endif %}
+            {% if p.get('estado') == 'FACTURADO' %}background:#e8f5e9;border-color:#66bb6a{% endif %}
+            {% if p.get('estado') == 'CANCELADO' %}background:#ffebee;border-color:#ef5350{% endif %}
+          ">{{ p.get("estado", "").replace("_", " ") }}</span>
+        </td>
+        <td>{{ "%.2f"|format(p.get("total", 0)) }}</td>
+        <td style="display:flex;gap:.25rem;flex-wrap:wrap;align-items:center">
+          {% set estado = p.get("estado") %}
+          
+          <!-- Botón Etiqueta (EN_PREPARACION, LISTO, FACTURADO) -->
+          {% if estado in ["EN_PREPARACION", "LISTO", "FACTURADO"] %}
+            <a class="btn" href="/pedidos/{{ p.get('id') }}/label.pdf" target="_blank" 
+               style="padding:.3rem .5rem;font-size:.85em;text-decoration:none;background:#e1f5fe"
+               title="Etiqueta con QR">🏷️ Etiqueta</a>
+          {% endif %}
+          
+          <!-- Botón Imprimir Packing (EN_PREPARACION y LISTO) -->
+          {% if estado in ["EN_PREPARACION", "LISTO"] %}
+            <a class="btn" href="/pedidos/{{ p.get('id') }}/packing" target="_blank" 
+               style="padding:.3rem .5rem;font-size:.85em;text-decoration:none;background:#e3f2fd"
+               title="Imprimir Packing Slip">🖨️</a>
+            <a class="btn" href="/pedidos/{{ p.get('id') }}/packing.pdf" target="_blank" 
+               style="padding:.3rem .5rem;font-size:.85em;text-decoration:none;background:#fff3e0"
+               title="Descargar PDF">📄 PDF</a>
+          {% endif %}
+          
+          <!-- Botón Remito (FACTURADO) -->
+          {% if estado == "FACTURADO" and p.get("venta_id") %}
+            <a class="btn" href="/ventas/{{ p.get('venta_id') }}/remito.pdf" target="_blank" 
+               style="padding:.3rem .5rem;font-size:.85em;text-decoration:none;background:#e8f5e9"
+               title="Remito de Venta">📄 Remito</a>
+          {% endif %}
+          
+          {% if estado == "NUEVO" %}
+            <button class="btn" type="button" style="padding:.3rem .5rem;font-size:.85em"
+                    hx-post="/app/pedidos/{{ p.get('id') }}/estado"
+                    hx-vals='{"estado": "EN_PREPARACION"}'
+                    hx-target="#tabla"
+                    hx-swap="outerHTML">Preparar</button>
+            <button class="btn" type="button" style="padding:.3rem .5rem;font-size:.85em"
+                    hx-get="/app/pedidos/form/{{ p.get('id') }}"
+                    hx-target="#form-container"
+                    hx-swap="innerHTML">Editar</button>
+            <button class="btn" type="button" style="padding:.3rem .5rem;font-size:.85em;background:#ffebee"
+                    hx-post="/app/pedidos/{{ p.get('id') }}/estado"
+                    hx-vals='{"estado": "CANCELADO"}'
+                    hx-target="#tabla"
+                    hx-swap="outerHTML"
+                    hx-confirm="¿Cancelar este pedido?">Cancelar</button>
+          {% endif %}
+          
+          {% if estado == "EN_PREPARACION" %}
+            <button class="btn" type="button" style="padding:.3rem .5rem;font-size:.85em"
+                    hx-post="/app/pedidos/{{ p.get('id') }}/estado"
+                    hx-vals='{"estado": "LISTO"}'
+                    hx-target="#tabla"
+                    hx-swap="outerHTML">Marcar Listo</button>
+            <button class="btn" type="button" style="padding:.3rem .5rem;font-size:.85em"
+                    hx-get="/app/pedidos/form/{{ p.get('id') }}"
+                    hx-target="#form-container"
+                    hx-swap="innerHTML">Editar</button>
+            <button class="btn" type="button" style="padding:.3rem .5rem;font-size:.85em;background:#ffebee"
+                    hx-post="/app/pedidos/{{ p.get('id') }}/estado"
+                    hx-vals='{"estado": "CANCELADO"}'
+                    hx-target="#tabla"
+                    hx-swap="outerHTML"
+                    hx-confirm="¿Cancelar este pedido?">Cancelar</button>
+          {% endif %}
+          
+          {% if estado == "LISTO" %}
+            <button class="btn" type="button" style="padding:.3rem .5rem;font-size:.85em;background:#e8f5e9"
+                    hx-post="/app/pedidos/{{ p.get('id') }}/facturar"
+                    hx-target="#tabla"
+                    hx-swap="outerHTML"
+                    hx-confirm="¿Facturar este pedido? Se creará una venta y se ajustará el stock.">Facturar</button>
+            <button class="btn" type="button" style="padding:.3rem .5rem;font-size:.85em;background:#ffebee"
+                    hx-post="/app/pedidos/{{ p.get('id') }}/estado"
+                    hx-vals='{"estado": "CANCELADO"}'
+                    hx-target="#tabla"
+                    hx-swap="outerHTML"
+                    hx-confirm="¿Cancelar este pedido?">Cancelar</button>
+          {% endif %}
+          
+          {% if estado in ["FACTURADO", "CANCELADO"] %}
+            <span style="font-size:.85em;color:#666">—</span>
+          {% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+    {% if not items %}
+      <tr><td colspan="8" class="muted">Sin resultados</td></tr>
+    {% endif %}
+    </tbody>
+  </table>
+  
+  <!-- Acciones masivas -->
+  <div id="bulk-actions" style="margin-top:1rem;padding:1rem;background:#f9f9f9;border-radius:.5rem;display:none">
+    <strong>Acciones masivas:</strong>
+    <span id="selected-count" style="margin-left:.5rem;color:#666">0 seleccionados</span>
+    <div style="margin-top:.5rem;display:flex;gap:.5rem;flex-wrap:wrap">
+      <button class="btn" onclick="bulkChangeEstado('EN_PREPARACION')" style="background:#fff3e0">
+        Marcar EN PREPARACIÓN
+      </button>
+      <button class="btn" onclick="bulkChangeEstado('LISTO')" style="background:#f1f8e9">
+        Marcar LISTO
+      </button>
+      <button class="btn" onclick="bulkChangeEstado('CANCELADO')" style="background:#ffebee">
+        Cancelar Seleccionados
+      </button>
+    </div>
+  </div>
+
+  <div class="search">
+    <span class="muted">Total: {{ total }}</span>
+    <div class="right">
+      {% if page > 1 %}
+        <button class="btn"
+                hx-get="/app/pedidos/table?page={{ page-1 }}&size={{ size }}&q={{ q|default('') }}&estado={{ estado|default('') }}"
+                hx-target="#tabla"
+                hx-swap="outerHTML">&larr; Anterior</button>
+      {% endif %}
+      {% if (page*size) < total %}
+        <button class="btn"
+                hx-get="/app/pedidos/table?page={{ page+1 }}&size={{ size }}&q={{ q|default('') }}&estado={{ estado|default('') }}"
+                hx-target="#tabla"
+                hx-swap="outerHTML">Siguiente &rarr;</button>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if oob_clear %}
+    <div id="form-container" hx-swap-oob="true"></div>
+  {% endif %}
+</div>
+
+<script>
+function toggleAllCheckboxes(source) {
+  const checkboxes = document.querySelectorAll('.pedido-checkbox');
+  checkboxes.forEach(cb => cb.checked = source.checked);
+  updateBulkActions();
+}
+
+function updateBulkActions() {
+  const checkboxes = document.querySelectorAll('.pedido-checkbox:checked');
+  const count = checkboxes.length;
+  const bulkActions = document.getElementById('bulk-actions');
+  const selectedCount = document.getElementById('selected-count');
+  
+  if (count > 0) {
+    bulkActions.style.display = 'block';
+    selectedCount.textContent = `${count} seleccionado${count > 1 ? 's' : ''}`;
+  } else {
+    bulkActions.style.display = 'none';
+  }
+}
+
+function bulkChangeEstado(nuevoEstado) {
+  const checkboxes = document.querySelectorAll('.pedido-checkbox:checked');
+  const ids = Array.from(checkboxes).map(cb => cb.value);
+  
+  if (ids.length === 0) {
+    alert('Seleccione al menos un pedido');
+    return;
+  }
+  
+  if (!confirm(`¿Cambiar ${ids.length} pedido(s) a estado ${nuevoEstado}?`)) {
+    return;
+  }
+  
+  // Enviar al servidor
+  fetch('/app/pedidos/bulk_estado', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: `pedido_ids=${ids.join(',')}&nuevo_estado=${nuevoEstado}`
+  })
+  .then(response => response.text())
+  .then(html => {
+    // Reemplazar tabla
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    const newTable = doc.getElementById('tabla');
+    if (newTable) {
+      document.getElementById('tabla').outerHTML = newTable.outerHTML;
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    alert('Error al procesar la solicitud');
+  });
+}
+
+// Actualizar cuando cambian los checkboxes
+document.addEventListener('change', function(e) {
+  if (e.target.classList.contains('pedido-checkbox') || e.target.id === 'select-all') {
+    updateBulkActions();
+  }
+});
+
+// Inicializar al cargar
+updateBulkActions();
+</script>
+

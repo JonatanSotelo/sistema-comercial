@@ -1,0 +1,27 @@
+<ul style="list-style:none;margin:0;padding:0;border:1px solid #ddd;max-height:200px;overflow-y:auto">
+{% for item in items %}
+  <li style="padding:.5rem;cursor:pointer;border-bottom:1px solid #eee"
+      onclick="
+        const row = this.closest('.item-row');
+        row.querySelector('.producto_id').value = '{{ item.get('id') }}';
+        row.querySelector('.producto-search').value = '{{ item.get('nombre') or item.get('name') }}';
+        row.querySelector('.producto-nombre').textContent = '{{ item.get('nombre') or item.get('name') }}';
+        row.querySelector('.producto-stock').textContent = 'Stock: {{ item.get('stock', 0) }}';
+        row.querySelector('.precio_unitario').value = '{{ item.get('precio') or item.get('price', 0) }}';
+        row.querySelector('.producto-results').style.display = 'none';
+        calcularTotal();
+      "
+      onmouseover="this.style.background='#f0f0f0'"
+      onmouseout="this.style.background='white'">
+    <strong>{{ item.get("nombre") or item.get("name") }}</strong>
+    <span style="color:#666;font-size:.9em">
+      - Precio: {{ "%.2f"|format(item.get("precio") or item.get("price", 0)) }}
+      - Stock: {{ item.get("stock", 0) }}
+    </span>
+  </li>
+{% endfor %}
+{% if not items %}
+  <li style="padding:.5rem;color:#666">Sin resultados</li>
+{% endif %}
+</ul>
+
