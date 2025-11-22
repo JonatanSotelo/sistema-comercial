@@ -5,6 +5,7 @@ Servicio para gestión de cobros y cálculo de saldos
 
 from decimal import Decimal
 from typing import Optional, Any
+from datetime import datetime
 from fastapi import HTTPException, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import func
@@ -215,14 +216,36 @@ def get_cuentas_corrientes(db: Session, cliente_id: Optional[int] = None, desde:
     """
     movimientos = []
     
+    # Parsear fechas string a datetime para comparaciones SQL correctas
+    desde_dt = None
+    hasta_dt = None
+    if desde:
+        try:
+            desde_dt = datetime.fromisoformat(desde.replace('Z', '+00:00'))
+        except (ValueError, AttributeError):
+            # Fallback: intentar formato simple YYYY-MM-DD
+            try:
+                desde_dt = datetime.strptime(desde[:10], "%Y-%m-%d") if len(desde) >= 10 else None
+            except:
+                desde_dt = None
+    
+    if hasta:
+        try:
+            hasta_dt = datetime.fromisoformat(hasta.replace('Z', '+00:00'))
+        except (ValueError, AttributeError):
+            try:
+                hasta_dt = datetime.strptime(hasta[:10], "%Y-%m-%d") if len(hasta) >= 10 else None
+            except:
+                hasta_dt = None
+    
     # Construir query base para ventas
     query_ventas = db.query(Venta).join(Cliente)
     if cliente_id:
         query_ventas = query_ventas.filter(Venta.cliente_id == cliente_id)
-    if desde:
-        query_ventas = query_ventas.filter(Venta.created_at >= desde)
-    if hasta:
-        query_ventas = query_ventas.filter(Venta.created_at <= hasta)
+    if desde_dt:
+        query_ventas = query_ventas.filter(Venta.created_at >= desde_dt)
+    if hasta_dt:
+        query_ventas = query_ventas.filter(Venta.created_at <= hasta_dt)
     
     ventas = query_ventas.all()
     
@@ -243,10 +266,10 @@ def get_cuentas_corrientes(db: Session, cliente_id: Optional[int] = None, desde:
     query_cobros = db.query(Cobro).join(Venta).join(Cliente)
     if cliente_id:
         query_cobros = query_cobros.filter(Venta.cliente_id == cliente_id)
-    if desde:
-        query_cobros = query_cobros.filter(Cobro.created_at >= desde)
-    if hasta:
-        query_cobros = query_cobros.filter(Cobro.created_at <= hasta)
+    if desde_dt:
+        query_cobros = query_cobros.filter(Cobro.created_at >= desde_dt)
+    if hasta_dt:
+        query_cobros = query_cobros.filter(Cobro.created_at <= hasta_dt)
     query_cobros = query_cobros.filter(Cobro.estado == EstadoCobro.CONFIRMADO)
     
     cobros = query_cobros.all()
@@ -274,4 +297,3 @@ def get_cuentas_corrientes(db: Session, cliente_id: Optional[int] = None, desde:
             mov["saldo"] = saldo_acum
     
     return movimientos
-

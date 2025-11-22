@@ -481,11 +481,11 @@ def reporte_cuentas_corrientes(
     Reporte de Cuentas Corrientes: movimientos (ventas=débitos, cobros=créditos) + saldo.
     v0.9.1
     """
-    from app.services.cobros_service import CobrosService
+    from app.services.cobros_service import get_cuentas_corrientes
     import io
     
-    service = CobrosService(db, current_user.id)
-    movimientos = service.get_cuentas_corrientes(cliente_id=cliente_id, desde=desde, hasta=hasta)
+    # Llamada directa a función (no existe CobrosService como clase)
+    movimientos = get_cuentas_corrientes(db, cliente_id=cliente_id, desde=desde, hasta=hasta)
     
     if format == "json":
         return movimientos
@@ -541,4 +541,3 @@ def reporte_cuentas_corrientes(
         return Response(content=xlsx_bytes, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", headers={
             "Content-Disposition": f"attachment; filename=cuentas_corrientes_{desde or 'all'}_{hasta or 'all'}.xlsx"
         })
-

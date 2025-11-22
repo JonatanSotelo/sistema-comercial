@@ -342,7 +342,7 @@ def generar_qr_json(factura: Factura) -> dict:
         "moneda": "PES",
         "ctz": 1,
         "tipoDocRec": factura.doc_tipo,
-        "nroDocRec": int(factura.doc_nro) if factura.doc_nro.isdigit() else 0,
+        "nroDocRec": int(factura.doc_nro) if (factura.doc_nro and factura.doc_nro.isdigit()) else 0,
         "tipoCodAut": "E",
         "codAut": factura.cae,
     }

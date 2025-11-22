@@ -44,13 +44,10 @@ def resolve_or_create_cliente_by_phone(
     """
     phone_normalized = normalize_phone(phone)
     
-    # Buscar por teléfono normalizado (normalizar todos los teléfonos en la query)
-    clientes = db.query(Cliente).all()
-    cliente = None
-    for c in clientes:
-        if c.telefono and normalize_phone(c.telefono) == phone_normalized:
-            cliente = c
-            break
+    # Buscar por teléfono normalizado - filtrar None primero para eficiencia
+    # Nota: Para mejor performance en producción, considerar agregar índice en Cliente.telefono
+    clientes = db.query(Cliente).filter(Cliente.telefono.isnot(None)).all()
+    cliente = next((c for c in clientes if normalize_phone(c.telefono) == phone_normalized), None)
     
     if cliente:
         return cliente
@@ -303,4 +300,3 @@ def quote_or_create_sale(
         "items": resolved_items,
         "total": float(venta.total)
     }
-
