@@ -2,7 +2,36 @@
 
 **Fecha:** 2025-11-22  
 **Branch Principal:** `main` (HTMX-first)  
-**Última Versión Estable:** v0.9.1
+**Última Versión Estable:** v0.9.1  
+**Commits Aplicados:** 
+- `5a34176` - Restauración 118 archivos v0.9.1
+- `a17eb89` - Corrección 4 bugs críticos
+
+---
+
+## 🎯 RESUMEN DE TRABAJO REALIZADO
+
+### ✅ Completado
+1. **Auditoría de Código:**
+   - Detectados 94 archivos faltantes (eliminados en limpieza)
+   - Restaurados 118 archivos desde tag v0.9.1 (11,935 líneas)
+   - Modelos, routers, services, templates, web UI completos
+
+2. **Corrección de Bugs:**
+   - 4 bugs críticos identificados y corregidos
+   - ImportError, AttributeError, performance y type mismatches
+   - Código más robusto y seguro
+
+3. **Documentación:**
+   - `FINAL_STATUS.md` creado con auditoría completa
+   - `smoke_quick.sh` script automatizado listo
+   - `TRANSITION_TO_HTMX_MAIN.md` con instrucciones
+
+### ⏳ Pendiente (Comandos listos para ejecutar)
+1. Rebuild + Migraciones Alembic
+2. Smoke Test automatizado
+3. Verificación CARRERA (sin campo "Activo")
+4. Cambiar default branch en GitHub a `main`
 
 ---
 
@@ -11,7 +40,8 @@
 | Ítem | Estado | Notas |
 |------|--------|-------|
 | Branch default | 🟡 PENDIENTE | Cambiar a `main` en GitHub Settings |
-| Modelos & Imports | ✅ CORREGIDO | 118 archivos restaurados de v0.9.1 |
+| Modelos & Imports | ✅ COMPLETADO | 118 archivos + 4 bugs corregidos |
+| Código Calidad | ✅ COMPLETADO | 4 bugs críticos fixed (commit a17eb89) |
 | Migraciones Alembic | ⏳ PENDIENTE | Ejecutar rebuild + upgrade |
 | Requirements.txt | ✅ COMPLETO | Todas las deps de v0.9.x presentes |
 | Docker Compose | ✅ VERIFICADO | Solo backend, sin frontend |
@@ -228,6 +258,33 @@
 ---
 
 ## 🔧 8. FIXES APLICADOS
+
+### Commit `a17eb89` - Corrección de 4 Bugs Críticos
+
+**Bugs Corregidos:**
+
+1. **reportes_router.py (línea 484-488):**
+   - ❌ **Problema:** Intentaba importar clase `CobrosService` que no existe
+   - ✅ **Fix:** Usar función directa `get_cuentas_corrientes()`
+   - **Impacto:** RuntimeError evitado en reportes de cuentas corrientes
+
+2. **facturacion_service.py (línea 345):**
+   - ❌ **Problema:** `factura.doc_nro.isdigit()` sin verificar `None`
+   - ✅ **Fix:** Agregado check: `factura.doc_nro and factura.doc_nro.isdigit()`
+   - **Impacto:** AttributeError evitado en generación de QR AFIP
+
+3. **whatsapp_orders_service.py (línea 48):**
+   - ❌ **Problema:** `db.query(Cliente).all()` carga TODOS los clientes en memoria
+   - ✅ **Fix:** Filtrar `telefono.isnot(None)` a nivel SQL antes de cargar
+   - **Impacto:** Mejor performance con tablas grandes de clientes
+
+4. **cobros_service.py (líneas 223-225, 269-272):**
+   - ❌ **Problema:** Comparar strings directamente con columnas DateTime
+   - ✅ **Fix:** Parsear `desde/hasta` a `datetime` con `fromisoformat()` y fallback
+   - **Impacto:** Queries correctas y sin errores SQL en reportes
+
+**Archivos Modificados:** 5 (4 servicios + FINAL_STATUS.md)
+**Líneas Cambiadas:** +181 / -65
 
 ### Commit `5a34176` - Restauración Masiva v0.9.1
 
